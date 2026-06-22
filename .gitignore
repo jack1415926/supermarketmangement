@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vs/
+.vscode/
+*.py
+*.pdf
+*.docx
+_doc*.txt
+_gen*.py
