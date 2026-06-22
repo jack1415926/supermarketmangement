@@ -55,11 +55,12 @@ goto end
 @set "MAVEN_PROJECTBASEDIR=%MAVEN_HOME%"
 @set "MAVEN_BASEDIR=%MAVEN_HOME%"
 
-@REM Find Java installation
+@REM Find Java installation — check if JAVA_HOME actually points to a valid Java
+@set "JAVA_EXEC=java"
 @if defined JAVA_HOME (
-    @set "JAVA_EXEC=%JAVA_HOME%\bin\java.exe"
-) else (
-    @set "JAVA_EXEC=java"
+    @if exist "%JAVA_HOME%\bin\java.exe" (
+        @set "JAVA_EXEC=%JAVA_HOME%\bin\java.exe"
+    )
 )
 
 @REM Set JVM options
