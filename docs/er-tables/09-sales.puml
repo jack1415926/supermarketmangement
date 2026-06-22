@@ -1,0 +1,18 @@
+@startuml
+title sales（销售单头）
+
+entity "sales（销售单头）" as sales {
+  id : BIGINT <<PK>>  // PK auto
+  flow_no : VARCHAR(30) <<unique>>  // unique S+年月日+序号
+  cashier_id : BIGINT <<FK>>  // FK -> employees.id
+  member_id : BIGINT <<FK>>  // FK -> members.id（可空）
+  total_amount : DECIMAL(12,2)  // 原价
+  discount_amount : DECIMAL(12,2)  // 折扣
+  received_amount : DECIMAL(12,2)  // 实收
+  change_amount : DECIMAL(12,2)  // 找零
+  payment_method : VARCHAR(20)  // CASH/WECHAT/ALIPAY/CARD
+  status : VARCHAR(20)  // COMPLETED/REFUNDED
+  remark : VARCHAR(255)
+  created_at : DATETIME  // 交易时间
+}
+@enduml

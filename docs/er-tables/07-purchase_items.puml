@@ -1,0 +1,12 @@
+@startuml
+title purchase_items（进货明细）
+
+entity "purchase_items（进货明细）" as purchase_items {
+  id : BIGINT <<PK>>  // PK auto
+  purchase_id : BIGINT <<FK>>  // FK -> purchases.id
+  product_id : BIGINT <<FK>>  // FK -> products.id
+  quantity : INT  // 进货数量
+  purchase_price : DECIMAL(10,2)  // 进货单价
+  subtotal : DECIMAL(12,2)  // quantity × price
+}
+@enduml

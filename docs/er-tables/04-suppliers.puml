@@ -1,0 +1,14 @@
+@startuml
+title suppliers（供应商）
+
+entity "suppliers（供应商）" as suppliers {
+  id : BIGINT <<PK>>  // PK auto
+  name : VARCHAR(100) <<unique>>  // unique 公司名
+  contact : VARCHAR(50)  // 联系人
+  phone : VARCHAR(20)
+  address : VARCHAR(200)
+  status : INT  // 1合作 0停用
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml

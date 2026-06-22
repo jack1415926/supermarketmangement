@@ -1,0 +1,13 @@
+@startuml
+title shifts（换班记录）
+
+entity "shifts（换班记录）" as shifts {
+  id : BIGINT <<PK>>  // PK auto
+  cashier_id : BIGINT <<FK>>  // FK -> employees.id
+  start_time : DATETIME  // 上班时间
+  end_time : DATETIME  // 下班时间
+  transaction_count : INT  // 当班笔数
+  total_amount : DECIMAL(12,2)  // 当班总额
+  status : VARCHAR(20)  // ACTIVE/CLOSED
+}
+@enduml
