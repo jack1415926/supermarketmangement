@@ -1,0 +1,13 @@
+@startuml
+title categories（商品分类）
+
+entity "categories（商品分类）" as categories {
+  id : BIGINT <<PK>>  // PK auto
+  name : VARCHAR(50) <<unique>>  // unique
+  parent_id : BIGINT <<FK>>  // FK -> categories.id 自引用
+  sort_order : INT  // 同级排序
+  status : INT  // 1启用 0禁用
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml
