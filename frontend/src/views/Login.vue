@@ -1,3 +1,9 @@
+<!--
+  登录页面
+  功能：用户名密码登录，对接后端 POST /api/auth/login
+  登录成功后按角色跳转：收银员 → /pos，管理员/系统管理员 → /dashboard
+-->
+
 ﻿<template>
   <div class="login-container">
     <div class="login-card">
