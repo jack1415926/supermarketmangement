@@ -74,8 +74,13 @@ public class SecurityConfig {
             // 定义哪些 URL 无需认证即可访问。
             // 其他所有 URL 都需要认证（带 JWT Token）。
             .authorizeHttpRequests(auth -> auth
-                // 公开接口：登录、健康检查
-                .requestMatchers("/api/auth/login", "/api/health").permitAll()
+                // 公开接口：登录、健康检查、Swagger UI 文档
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/health",
+                    "/swagger-ui/**",       // Swagger UI 页面
+                    "/v3/api-docs/**"       // OpenAPI JSON 文档
+                ).permitAll()
                 // 其他所有 /api/** 接口都需要认证
                 .requestMatchers("/api/**").authenticated()
                 // 其他路径（静态资源等）允许匿名访问
