@@ -107,6 +107,7 @@ CREATE TABLE products (
     status          INT           NOT NULL DEFAULT 1      COMMENT '状态：1上架 0下架',
     category_id     BIGINT                                 COMMENT '所属分类 ID',
     supplier_id     BIGINT                                 COMMENT '供应商 ID',
+    version         BIGINT        NOT NULL DEFAULT 0      COMMENT '乐观锁版本号（防超卖）',
     created_at      DATETIME                              COMMENT '创建时间',
     updated_at      DATETIME                              COMMENT '更新时间',
     PRIMARY KEY (id),
