@@ -1,0 +1,17 @@
+@startuml
+title employees（员工）
+
+entity "employees（员工）" as employees {
+  id : BIGINT <<PK>>  // PK auto
+  name : VARCHAR(50)
+  phone : VARCHAR(20)
+  email : VARCHAR(100)
+  position : VARCHAR(50)  // 收银员/店长/采购员
+  salary : DECIMAL(10,2)  // 月薪
+  hire_date : DATE  // 入职日期
+  status : INT  // 1在职 0离职
+  user_id : BIGINT <<FK>>  // FK -> users.id
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml
