@@ -95,7 +95,8 @@ public class ReportService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getMonthlySalesReport(int year, int month) {
         LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
-        LocalDateTime end = start.plusMonths(1).minusSeconds(1);
+        // 月末 23:59:59.999999999（覆盖完整的纳秒范围，不丢失边界交易）
+        LocalDateTime end = start.plusMonths(1).minusNanos(1);
         List<Object[]> rows = saleRepository.getMonthlySalesReport(start, end);
 
         List<Map<String, Object>> result = new ArrayList<>();

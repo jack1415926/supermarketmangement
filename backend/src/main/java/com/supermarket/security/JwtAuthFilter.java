@@ -63,12 +63,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = extractTokenFromRequest(request);
 
         // Step 2: 如果有 Token 且有效，设置认证信息
-        if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
-            setAuthentication(token);
+        // try-catch 保证即使 setAuthentication() 内部抛出异常（如 NPE），
+        // filterChain.doFilter() 依然会被调用，请求不会"卡住"。
+        try {
+            if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
+                setAuthentication(token);
+            }
+        } catch (Exception e) {
+            // 认证失败不阻塞请求，让后续的 Spring Security URL 权限配置决定是否拒绝
+            // 生产环境应记录日志
         }
 
         // Step 3: 放行，继续处理请求
-        // 即使没有 Token，也让请求继续（由 Spring Security 的 URL 权限配置决定是否拒绝）
         filterChain.doFilter(request, response);
     }
 
@@ -112,7 +118,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // 从数据库查询用户（确保用户仍然存在且未被禁用）
         // 使用 orElse(null) 是因为用户可能已被删除
         User user = userRepository.findByUsername(username).orElse(null);
-        if (user == null || user.getStatus() == 0) {
+        // 使用 Integer.valueOf().equals() 避免自动拆箱 NPE
+        // user.getStatus() 为 Integer 类型，若数据库意外为 NULL 会抛 NullPointerException
+        if (user == null || Integer.valueOf(0).equals(user.getStatus())) {
             return; // 用户不存在或已禁用，不设置认证
         }
 

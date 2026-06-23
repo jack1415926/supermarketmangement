@@ -61,10 +61,7 @@ public class DataInitializer implements CommandLineRunner {
 
             userRepository.save(admin);
 
-            log.info("默认管理员账号创建成功！");
-            log.info("  用户名: admin");
-            log.info("  密码: admin123");
-            log.info("  请登录后立即修改密码！");
+            log.info("默认管理员账号创建成功！用户名: admin，请登录后立即修改密码");
         } else {
             log.info("数据库已有 {} 个用户，跳过初始化。", userRepository.count());
         }

@@ -13,6 +13,7 @@
  */
 package com.supermarket.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;  // Jackson 注解：序列化为 JSON 时隐藏此字段
 import jakarta.persistence.*;                      // JPA 注解（@Entity, @Id, @Column 等）
 import lombok.*;                                    // Lombok 注解（自动生成 getter/setter/构造器）
 import org.hibernate.annotations.CreationTimestamp; // 自动填充创建时间
@@ -68,11 +69,13 @@ public class User {
     /**
      * 登录密码，存储 BCrypt 加密后的密文（不是明文！）。
      *
-     * 密码由 Spring Security 的 BCryptPasswordEncoder 加密，
-     * 加密后的字符串固定 60 字符，所以 length 设为 100 留有余量。
+     * @JsonIgnore：序列化为 JSON 时自动跳过此字段。
+     *   这样即使 Service 层不小心返回了完整的 User 实体（如 GET /api/auth/me），
+     *   密码哈希也不会出现在前端响应中。这是防止密码泄露的第二道防线。
      *
      * 重要：永远不要在数据库存明文密码。BCrypt 是单向哈希，不可逆。
      */
+    @JsonIgnore
     @Column(nullable = false, length = 100)
     private String password;
 

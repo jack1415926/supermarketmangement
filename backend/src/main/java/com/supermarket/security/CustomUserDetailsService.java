@@ -57,7 +57,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
             user.getUsername(),                          // 用户名
             user.getPassword(),                          // 密码（已 BCrypt 加密）
-            user.getStatus() == 1,                       // enabled（账号是否启用）
+            Integer.valueOf(1).equals(user.getStatus()),   // enabled（避免 Integer 自动拆箱 NPE）
             true,                                        // accountNonExpired（账号未过期）
             true,                                        // credentialsNonExpired（凭证未过期）
             true,                                        // accountNonLocked（账号未锁定）

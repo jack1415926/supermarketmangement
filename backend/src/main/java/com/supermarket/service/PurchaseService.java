@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import jakarta.persistence.OptimisticLockException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -31,17 +34,38 @@ public class PurchaseService {
     private final EmployeeRepository employeeRepository;
 
     /**
-     * 创建进货单（自动入库更新库存）。
+     * 创建进货单 —— 对外开放的入口，带乐观锁重试。
+     *
+     * 并发进货同一商品时，Product 的 @Version 乐观锁会触发冲突。
+     * 此方法最多重试 3 次，保证库存数据正确。
+     */
+    public Purchase create(PurchaseRequest request, String cashierUsername) {
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                return doCreate(request, cashierUsername);
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+                if (attempt == maxRetries - 1) {
+                    throw new IllegalStateException("进货失败：商品库存已被其他操作更新，请重试", e);
+                }
+                try { Thread.sleep(50); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        throw new IllegalStateException("进货失败，已达最大重试次数");
+    }
+
+    /**
+     * 创建进货单 —— 内部方法（由 create() 带重试调用）。
      *
      * 流程：
      *   1. 查询经办人和供应商
      *   2. 校验商品存在
      *   3. 计算总金额、更新库存和进价
      *   4. 创建进货单（cascade 自动保存明细）
-     *   5. 批量保存商品库存变更
+     *   5. 批量保存商品库存变更（@Version 乐观锁防并发丢失）
      */
     @Transactional
-    public Purchase create(PurchaseRequest request, String cashierUsername) {
+    public Purchase doCreate(PurchaseRequest request, String cashierUsername) {
         // 使用数据库索引查询，避免全表扫描
         Employee employee = employeeRepository.findByUserUsername(cashierUsername)
             .orElseThrow(() -> new IllegalStateException("找不到员工信息: " + cashierUsername));
