@@ -73,7 +73,7 @@ const isEdit = ref(false)
 const editId = ref(null)
 const form = ref({ name: '', contact: '', phone: '', address: '', category: '' })
 
-async function onMounted(() => fetchList()) {
+async function fetchList() {
   try {
     const res = await supplierAPI.list({ keyword: keyword.value })
     list.value = res.data || []

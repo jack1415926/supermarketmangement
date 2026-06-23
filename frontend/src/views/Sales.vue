@@ -78,7 +78,7 @@ const showShiftSummary = ref(false)
 const detailData = ref({})
 const shiftList = ref([])
 
-async function onMounted(() => fetchList()) {
+async function fetchList() {
   try {
     const res = await saleAPI.list({ keyword: keyword.value })
     list.value = (res.data || []).map(s => ({

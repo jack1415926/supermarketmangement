@@ -84,7 +84,7 @@ const showCheck = ref(false)
 const showReport = ref(false)
 const reportList = ref([])
 
-async function onMounted(() => fetchList()) {
+async function fetchList() {
   try {
     const res = await inventoryAPI.list({ keyword: keyword.value })
     list.value = res.data || []

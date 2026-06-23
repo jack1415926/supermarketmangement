@@ -76,7 +76,7 @@ const isEdit = ref(false)
 const editId = ref(null)
 const form = ref({ name: '', phone: '', position: '', hireDate: '', status: '在职' })
 
-async function onMounted(() => fetchList()) {
+async function fetchList() {
   try {
     const res = await employeeAPI.list({ keyword: keyword.value })
     list.value = res.data || []

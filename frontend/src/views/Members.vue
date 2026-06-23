@@ -149,7 +149,7 @@ const historyList = ref([])
 const historyTotal = ref('0')
 
 /** 拉取会员列表（当前假数据） */
-async function onMounted(() => fetchList()) {
+async function fetchList() {
   try {
     const res = await memberAPI.list({ keyword: keyword.value })
     list.value = res.data || []
