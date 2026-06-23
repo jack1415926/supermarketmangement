@@ -1,37 +1,18 @@
 /**
- * 数据初始化器 —— 首次启动时自动创建默认管理员账号。
+ * 数据初始化器 —— 首次启动时自动创建三个默认账号。
  *
- * CommandLineRunner：
- *   Spring Boot 启动完成后自动执行 run() 方法。
- *   适合用于：插入初始数据、检查环境配置、预热缓存。
- *
- * 这里用于：
- *   首次启动时检查是否已有用户，如果没有则创建默认 admin 账号。
- *   这样后端启动后就能立即登录测试。
- *
- * 类似 C++ 中的 main() 之后调用一个 init() 函数做初始化。
- *
- * 默认账号：
- *   用户名：admin
- *   密码：admin123
- *   角色：ROLE_ADMIN（系统管理员，拥有所有权限）
- *
- * @author 徐磊
+ * @author 殷智元
  */
 package com.supermarket.config;
 
 import com.supermarket.entity.User;
 import com.supermarket.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j; // Lombok 的日志注解
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * @Slf4j：Lombok 的日志注解，自动生成 log 对象。
- *   用法：log.info("消息")、log.error("错误", exception)
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,28 +21,42 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Spring Boot 启动后自动执行。
-     *
-     * @param args 命令行参数
-     */
     @Override
     public void run(String... args) {
-        // 检查是否已有用户记录
         if (userRepository.count() == 0) {
-            log.info("数据库无用户记录，开始创建默认管理员账号...");
+            log.info("数据库无用户记录，开始创建默认账号...");
 
-            // 创建默认管理员
+            // 管理员（所有权限）
             User admin = new User();
             admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("admin123")); // BCrypt 加密
+            admin.setPassword(passwordEncoder.encode("123456"));
             admin.setDisplayName("系统管理员");
-            admin.setRole("ROLE_ADMIN"); // 系统管理员，最高权限
-            admin.setStatus(1);          // 启用状态
-
+            admin.setRole("ROLE_ADMIN");
+            admin.setStatus(1);
             userRepository.save(admin);
 
-            log.info("默认管理员账号创建成功！用户名: admin，请登录后立即修改密码");
+            // 店长（管理权限）
+            User manager = new User();
+            manager.setUsername("manager");
+            manager.setPassword(passwordEncoder.encode("123456"));
+            manager.setDisplayName("店长");
+            manager.setRole("ROLE_MANAGER");
+            manager.setStatus(1);
+            userRepository.save(manager);
+
+            // 收银员（收银权限）
+            User cashier = new User();
+            cashier.setUsername("cashier");
+            cashier.setPassword(passwordEncoder.encode("123456"));
+            cashier.setDisplayName("收银员");
+            cashier.setRole("ROLE_CASHIER");
+            cashier.setStatus(1);
+            userRepository.save(cashier);
+
+            log.info("默认账号创建完成！");
+            log.info("  admin   / 123456   (超管)");
+            log.info("  manager / 123456   (店长)");
+            log.info("  cashier / 123456   (收银员)");
         } else {
             log.info("数据库已有 {} 个用户，跳过初始化。", userRepository.count());
         }
