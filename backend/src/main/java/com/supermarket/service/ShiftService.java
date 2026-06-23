@@ -8,11 +8,13 @@ package com.supermarket.service;
 import com.supermarket.entity.Employee;
 import com.supermarket.entity.Shift;
 import com.supermarket.repository.EmployeeRepository;
+import com.supermarket.repository.SaleRepository;
 import com.supermarket.repository.ShiftRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -23,6 +25,7 @@ public class ShiftService {
 
     private final ShiftRepository shiftRepository;
     private final EmployeeRepository employeeRepository;
+    private final SaleRepository saleRepository; // 用于查询当班交易数据
 
     /**
      * 开始班次（收银员登录后自动创建）。
@@ -39,14 +42,16 @@ public class ShiftService {
         shift.setCashier(cashier);
         shift.setStartTime(LocalDateTime.now());
         shift.setTransactionCount(0);
-        shift.setTotalAmount(java.math.BigDecimal.ZERO);
+        shift.setTotalAmount(BigDecimal.ZERO);
         shift.setStatus("ACTIVE");
         return shiftRepository.save(shift);
     }
 
     /**
      * 结束班次（交班）。
-     * 更新当班交易统计并关闭班次。
+     *
+     * 从 sales 表查询该收银员在班次时间范围内的交易数据，
+     * 自动填充 transactionCount 和 totalAmount，确保报表准确。
      */
     @Transactional
     public Shift endShift(String username) {
@@ -54,7 +59,17 @@ public class ShiftService {
             .orElseThrow(() -> new IllegalStateException("找不到收银员信息"));
         Shift shift = shiftRepository.findByCashierIdAndStatus(cashier.getId(), "ACTIVE")
             .orElseThrow(() -> new NoSuchElementException("没有活跃的班次"));
-        shift.setEndTime(LocalDateTime.now());
+
+        // 查询班次期间该收银员的交易统计（从 sales 表按 cashier_id + 日期聚合计算）
+        LocalDateTime start = shift.getStartTime();
+        LocalDateTime end = LocalDateTime.now();
+        Long cashierId = cashier.getId();
+        BigDecimal totalAmount = saleRepository.getTotalAmountByCashierAndDateRange(cashierId, start, end);
+        Long transactionCount = saleRepository.getTransactionCountByCashierAndDateRange(cashierId, start, end);
+
+        shift.setEndTime(end);
+        shift.setTotalAmount(totalAmount != null ? totalAmount : BigDecimal.ZERO);
+        shift.setTransactionCount(transactionCount != null ? transactionCount.intValue() : 0);
         shift.setStatus("CLOSED");
         return shiftRepository.save(shift);
     }

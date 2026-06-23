@@ -111,6 +111,24 @@ public class Product {
     @Column(nullable = false)
     private Integer status = 1;
 
+    /**
+     * 乐观锁版本号 —— 解决并发超卖问题。
+     *
+     * @Version 是 JPA 的乐观锁机制：
+     *   每次更新 Product 时，JPA 自动将 version 加 1，
+     *   并在 UPDATE 语句中加上 WHERE version = ? 条件。
+     *   如果两个并发请求同时更新同一商品：
+     *     T1 读到 version=5 → UPDATE SET stock=2, version=6 WHERE id=1 AND version=5 → 成功
+     *     T2 读到 version=5 → UPDATE SET stock=2, version=6 WHERE id=1 AND version=5 → 失败（version 已是 6）
+     *   T2 会收到 OptimisticLockException，Spring 自动回滚事务。
+     *   调用方可以重试整个 checkout 操作。
+     *
+     * 类似 C++ 中的 CAS（Compare-And-Swap）原子操作。
+     */
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     // ==================== 关联关系 ====================
 
     /**

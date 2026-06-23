@@ -30,6 +30,9 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import jakarta.persistence.OptimisticLockException; // JPA 乐观锁异常，并发更新冲突时抛出
+import org.springframework.orm.ObjectOptimisticLockingFailureException; // Spring 包装的乐观锁异常
+
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -43,7 +46,31 @@ public class SaleService {
     private final EmployeeRepository employeeRepository;
 
     /**
-     * POS 结账 —— 最核心的业务方法。
+     * POS 结账 —— 对外开放的入口，带乐观锁重试。
+     *
+     * 高并发下多个收银台可能同时扣减同一商品的库存，
+     * Product 实体的 @Version 乐观锁会在并发冲突时抛出 OptimisticLockException。
+     * 此方法最多重试 3 次，每次自动重新读取库存，保证数据正确。
+     */
+    public SaleResponse checkout(SaleRequest request, String cashierUsername) {
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                return doCheckout(request, cashierUsername);
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+                if (attempt == maxRetries - 1) {
+                    throw new IllegalStateException(
+                        "结账失败：商品库存已被更新，请重新扫描商品后再次结账", e);
+                }
+                // 重试前短暂等待，给其他事务完成的时间
+                try { Thread.sleep(50); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        throw new IllegalStateException("结账失败，已达最大重试次数");
+    }
+
+    /**
+     * POS 结账 —— 核心业务逻辑（内部方法，由 checkout() 带重试调用）。
      *
      * 流程：
      *   1. 校验购物清单不为空
@@ -52,18 +79,19 @@ public class SaleService {
      *   4. 计算总金额、折扣、应收、找零
      *   5. 生成交易流水号
      *   6. 创建销售单（级联自动保存明细）
-     *   7. 批量扣减库存
+     *   7. 批量扣减库存（@Version 乐观锁防超卖）
      *   8. 更新会员累计消费和积分
      *
      * @Transactional 保证整个流程在一个数据库事务中执行。
      *   任何一步失败，所有已执行的数据库操作全部回滚。
+     *   并发冲突时抛出 OptimisticLockException，由外层 checkout() 重试。
      *
-     * @param request 结账请求（购物清单 + 会员卡号 + 收款方式 + 实收金额）
-     * @param cashierUsername 收银员用户名（从 JWT 中获取）
-     * @return 结账响应（流水号、找零等信息）
+     * @param request 结账请求
+     * @param cashierUsername 收银员用户名
+     * @return 结账响应
      */
     @Transactional
-    public SaleResponse checkout(SaleRequest request, String cashierUsername) {
+    public SaleResponse doCheckout(SaleRequest request, String cashierUsername) {
         // ========== Step 1: 查询收银员（走数据库索引，不用全表扫描） ==========
         Employee cashier = employeeRepository.findByUserUsername(cashierUsername)
             .orElseThrow(() -> new IllegalStateException("找不到收银员信息: " + cashierUsername));

@@ -38,13 +38,36 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     @Query("SELECT s FROM Sale s WHERE s.createdAt BETWEEN :start AND :end")
     Page<Sale> findByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, Pageable pageable);
 
-    /** 当日销售汇总：总金额和交易笔数 */
+    /** 当日销售汇总：总金额 */
     @Query("SELECT COALESCE(SUM(s.totalAmount), 0) FROM Sale s WHERE s.createdAt BETWEEN :start AND :end AND s.status = 'COMPLETED'")
     BigDecimal getTotalAmountByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /** 当日交易笔数 */
     @Query("SELECT COUNT(s) FROM Sale s WHERE s.createdAt BETWEEN :start AND :end AND s.status = 'COMPLETED'")
     Long getTransactionCountByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 某收银员在指定时间范围内的交易总金额（用于换班统计）。
+     * 按 cashier_id 筛选，只统计该收银员的交易。
+     */
+    @Query("SELECT COALESCE(SUM(s.totalAmount), 0) FROM Sale s " +
+           "WHERE s.cashier.id = :cashierId AND s.createdAt BETWEEN :start AND :end AND s.status = 'COMPLETED'")
+    BigDecimal getTotalAmountByCashierAndDateRange(
+        @Param("cashierId") Long cashierId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end
+    );
+
+    /**
+     * 某收银员在指定时间范围内的交易笔数（用于换班统计）。
+     */
+    @Query("SELECT COUNT(s) FROM Sale s " +
+           "WHERE s.cashier.id = :cashierId AND s.createdAt BETWEEN :start AND :end AND s.status = 'COMPLETED'")
+    Long getTransactionCountByCashierAndDateRange(
+        @Param("cashierId") Long cashierId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end
+    );
 
     /**
      * 收银员交班汇总：按收银员统计当日交易笔数和金额。
