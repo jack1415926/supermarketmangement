@@ -6,6 +6,7 @@
 package com.supermarket.service;
 
 import com.supermarket.entity.Supplier;
+import com.supermarket.repository.ProductRepository;
 import com.supermarket.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.NoSuchElementException;
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
+    private final ProductRepository productRepository;
 
     /** 查询所有合作中的供应商 */
     @Transactional(readOnly = true)
@@ -58,10 +60,13 @@ public class SupplierService {
         return supplierRepository.save(existing);
     }
 
-    /** 停用供应商（软删除） */
+    /** 停用供应商（软删除），检查是否有商品仍引用此供应商 */
     @Transactional
     public void deactivate(Long id) {
         Supplier supplier = findById(id);
+        if (!productRepository.findBySupplierId(id).isEmpty()) {
+            throw new IllegalArgumentException("该供应商下还有关联商品，请先处理商品再停用供应商");
+        }
         supplier.setStatus(0);
         supplierRepository.save(supplier);
     }

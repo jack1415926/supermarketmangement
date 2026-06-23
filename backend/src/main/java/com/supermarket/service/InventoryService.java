@@ -38,13 +38,31 @@ public class InventoryService {
         return PageDTO.from(productPage.map(this::toDTO));
     }
 
-    /** 更新商品库存预警阈值 */
+    /**
+     * 更新商品库存预警阈值。
+     * null 参数表示保持原值不变（避免误覆盖）。
+     */
     @Transactional
     public void updateThreshold(Long productId, Integer minStock, Integer maxStock) {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new NoSuchElementException("商品不存在: id=" + productId));
-        product.setMinStock(minStock);
-        product.setMaxStock(maxStock);
+        // 仅当明确传入值时才更新
+        if (minStock != null) {
+            // 校验：下限不能大于上限
+            if (maxStock != null && minStock > maxStock) {
+                throw new IllegalArgumentException("库存下限不能大于上限");
+            }
+            if (minStock > (maxStock != null ? maxStock : product.getMaxStock())) {
+                throw new IllegalArgumentException("库存下限不能大于上限");
+            }
+            product.setMinStock(minStock);
+        }
+        if (maxStock != null) {
+            if (minStock == null && product.getMinStock() > maxStock) {
+                throw new IllegalArgumentException("库存下限不能大于上限");
+            }
+            product.setMaxStock(maxStock);
+        }
         productRepository.save(product);
     }
 

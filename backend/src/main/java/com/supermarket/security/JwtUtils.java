@@ -22,9 +22,8 @@
  */
 package com.supermarket.security;
 
-import io.jsonwebtoken.*;                       // JJWT 库的核心类
+import io.jsonwebtoken.*;                       // JwtException, Jwts, Claims, ExpiredJwtException 等
 import io.jsonwebtoken.security.Keys;            // 密钥工具
-import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value; // 读取 application.yml 中的配置
 import org.springframework.stereotype.Component;           // 标记为 Spring 管理的 Bean
 
@@ -120,17 +119,15 @@ public class JwtUtils {
      * @return true 表示 Token 有效
      */
     public boolean validateToken(String token) {
+        // 防御性检查：拒绝 null 或空字符串
+        if (token == null || token.isBlank()) {
+            return false;
+        }
         try {
-            parseToken(token); // 解析成功 = 有效
+            parseToken(token);
             return true;
-        } catch (SignatureException e) {
-            // 签名不匹配（密钥不对或被篡改）
-            return false;
-        } catch (ExpiredJwtException e) {
-            // Token 已过期
-            return false;
-        } catch (MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            // Token 格式错误、不支持的格式、参数异常
+        } catch (JwtException | IllegalArgumentException e) {
+            // 捕获所有 JWT 相关异常(Signature/Expired/Premature/Malformed/Unsupported)
             return false;
         }
     }

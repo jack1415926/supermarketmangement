@@ -33,21 +33,29 @@ public class InventoryController {
         return Result.success(inventoryService.findAll(page, size));
     }
 
-    /** 更新商品库存预警阈值 */
+    /**
+     * 更新商品库存预警阈值。
+     * 只更新请求中指定的字段，未传入的字段保持不变。
+     */
     @PutMapping("/{productId}/threshold")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Void> updateThreshold(
         @PathVariable Long productId,
         @RequestBody Map<String, Integer> body
     ) {
-        Integer minStock = body.getOrDefault("minStock", 0);
-        Integer maxStock = body.getOrDefault("maxStock", 999);
+        // 只取请求中明确传入的值，null 表示保持原值
+        Integer minStock = body.containsKey("minStock") ? body.get("minStock") : null;
+        Integer maxStock = body.containsKey("maxStock") ? body.get("maxStock") : null;
+        // 至少需要传入一个值
+        if (minStock == null && maxStock == null) {
+            throw new IllegalArgumentException("请至少指定 minStock 或 maxStock");
+        }
         inventoryService.updateThreshold(productId, minStock, maxStock);
         return Result.success();
     }
 
-    /** 库存盘点：检查缺货和积压商品 */
-    @PostMapping("/check")
+    /** 库存盘点：检查缺货和积压商品（只读查询，使用 GET） */
+    @GetMapping("/check")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<InventoryDTO>> checkInventory() {
         return Result.success(inventoryService.checkInventory());

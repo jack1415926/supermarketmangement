@@ -8,8 +8,11 @@ package com.supermarket.controller;
 import com.supermarket.common.Result;
 import com.supermarket.service.ReportService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -19,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
+@Validated // 启用方法参数校验（@Min @Max 等）
 public class ReportController {
 
     private final ReportService reportService;
@@ -48,7 +52,7 @@ public class ReportController {
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> salesMonthly(
         @RequestParam int year,
-        @RequestParam int month
+        @RequestParam @Min(1) @Max(12) int month
     ) {
         return Result.success(reportService.getMonthlySalesReport(year, month));
     }

@@ -8,6 +8,7 @@ package com.supermarket.service;
 import com.supermarket.dto.CategoryDTO;
 import com.supermarket.entity.Category;
 import com.supermarket.repository.CategoryRepository;
+import com.supermarket.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     /** 查询分类树（只读操作） */
     @Transactional(readOnly = true)
@@ -79,13 +81,19 @@ public class CategoryService {
         return categoryRepository.save(existing);
     }
 
-    /** 删除分类（需检查是否有子分类） */
+    /** 删除分类（需检查是否有子分类和商品） */
     @Transactional
     public void delete(Long id) {
         Category category = findById(id);
+        // 检查是否有子分类
         List<Category> children = categoryRepository.findByParentIdOrderBySortOrderAsc(id);
         if (!children.isEmpty()) {
             throw new IllegalArgumentException("该分类下有子分类，请先删除子分类");
+        }
+        // 检查是否有商品使用此分类（防止外键约束错误）
+        // 使用分页查询检查是否有任何商品引用了此分类
+        if (productRepository.findByCategoryId(id, org.springframework.data.domain.PageRequest.of(0, 1)).hasContent()) {
+            throw new IllegalArgumentException("该分类下有商品，无法删除");
         }
         categoryRepository.delete(category);
     }

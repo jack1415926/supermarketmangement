@@ -21,6 +21,7 @@ import com.supermarket.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -66,7 +67,7 @@ public class AuthService {
 
         // 检查账号是否被禁用
         if (user.getStatus() == 0) {
-            throw new BadCredentialsException("账号已被禁用，请联系管理员");
+            throw new DisabledException("账号已被禁用，请联系管理员");
         }
 
         // Step 4: 生成 JWT Token

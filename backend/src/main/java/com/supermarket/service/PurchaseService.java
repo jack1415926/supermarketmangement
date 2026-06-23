@@ -145,7 +145,9 @@ public class PurchaseService {
             item.put("barcode", p.getBarcode());
             item.put("currentStock", p.getStock());
             item.put("minStock", p.getMinStock());
-            int suggestQty = (p.getMinStock() * 2) - p.getStock();
+            // 防御性处理：minStock 可能为 null（默认视为 0）
+            int minStock = p.getMinStock() != null ? p.getMinStock() : 0;
+            int suggestQty = (minStock * 2) - (p.getStock() != null ? p.getStock() : 0);
             item.put("suggestQuantity", Math.max(suggestQty, 1));
             if (p.getSupplier() != null) {
                 item.put("supplierName", p.getSupplier().getName());
