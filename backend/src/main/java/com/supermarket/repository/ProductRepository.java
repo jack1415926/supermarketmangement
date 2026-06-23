@@ -48,15 +48,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * 查询所有库存低于下限的商品（缺货预警）。
      * 用于"进货计划"功能。
      *
-     * stock < minStock → 当前库存低于安全阈值，需要补货。
+     * Spring Data JPA 的方法命名无法直接比较两个字段（stock <= minStock），
+     * 因此使用 @Query JPQL 手动编写查询。
      */
-    List<Product> findByStockLessThanEqualMinStock();
+    @Query("SELECT p FROM Product p WHERE p.stock <= p.minStock")
+    List<Product> findLowStock();
 
     /**
      * 查询所有库存高于上限的商品（积压预警）。
-     * stock > maxStock → 库存积压，需要促销或减少进货。
+     * 同上，两个字段的比较必须用 @Query。
      */
-    List<Product> findByStockGreaterThanEqualMaxStock();
+    @Query("SELECT p FROM Product p WHERE p.stock >= p.maxStock")
+    List<Product> findOverStock();
 
     /**
      * 根据供应商 ID 查询商品。

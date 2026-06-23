@@ -136,7 +136,7 @@ public class PurchaseService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getPurchasePlan() {
-        List<Product> lowStockProducts = productRepository.findByStockLessThanEqualMinStock();
+        List<Product> lowStockProducts = productRepository.findLowStock();
         List<Map<String, Object>> plan = new ArrayList<>();
         for (Product p : lowStockProducts) {
             Map<String, Object> item = new HashMap<>();
