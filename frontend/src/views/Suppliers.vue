@@ -64,7 +64,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { supplierAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showForm = ref(false)
@@ -72,21 +73,32 @@ const isEdit = ref(false)
 const editId = ref(null)
 const form = ref({ name: '', contact: '', phone: '', address: '', category: '' })
 
-function fetchList() {
-  list.value = [
-    { id: 1, name: '统一食品有限公司', contact: '赵经理', phone: '021-55667788', address: '上海市浦东新区', category: '饮料、食品' },
-    { id: 2, name: '日用品批发市场', contact: '钱老板', phone: '021-55667799', address: '上海市闵行区', category: '日用品、清洁用品' },
-  ]
+async function onMounted(() => fetchList()) {
+  try {
+    const res = await supplierAPI.list({ keyword: keyword.value })
+    list.value = res.data || []
+  } catch (err) {
+    console.error('获取供应商列表失败', err)
+  }
 }
 function openAdd() { isEdit.value = false; editId.value = null; form.value = { name: '', contact: '', phone: '', address: '', category: '' }; showForm.value = true }
 function openEdit(item) { isEdit.value = true; editId.value = item.id; form.value = { name: item.name, contact: item.contact, phone: item.phone, address: item.address, category: item.category }; showForm.value = true }
-function handleSave() {
+async function handleSave() {
   if (!form.value.name) { alert('请输入供应商名称'); return }
-  if (isEdit.value) { const t = list.value.find(i => i.id === editId.value); if (t) Object.assign(t, form.value) }
-  else { list.value.push({ id: Date.now(), ...form.value }) }
-  showForm.value = false
+  try {
+    if (isEdit.value) {
+      await supplierAPI.update(editId.value, form.value)
+    } else {
+      await supplierAPI.create(form.value)
+    }
+    showForm.value = false
+    onMounted(() => fetchList())
+  } catch (err) {
+    console.error('保存失败', err)
+    alert('保存失败')
+  }
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>

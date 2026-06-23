@@ -57,7 +57,8 @@
 </table>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { reportAPI, inventoryAPI } from '@/api'
 
 // 统计数据
 const stats = ref({
@@ -68,12 +69,24 @@ const stats = ref({
 })
 
 // 页面加载时初始化（当前用假数据）
-stats.value = {
-  todaySales: '3,568.00',
-  todayOrders: 47,
-  warnCount: 5,
-  memberCount: 128
+/** 加载统计数据 */
+async function loadStats() {
+  try {
+    const daily = await reportAPI.salesDaily({})
+    const invRes = await inventoryAPI.list({})
+    const warnItems = (invRes.data || []).filter(i => i.currentStock <= i.stockMin)
+    if (daily.data) {
+      stats.value.todaySales = Number(daily.data.totalAmount || 0).toFixed(2)
+      stats.value.todayOrders = daily.data.orderCount || 0
+    }
+    stats.value.warnCount = warnItems.length
+  } catch (err) {
+    console.error('加载统计数据失败', err)
+    // 使用默认值
+    stats.value = { todaySales: '0.00', todayOrders: 0, warnCount: 0, memberCount: 0 }
+  }
 }
+onMounted(() => loadStats())
 // 库存预警列表
 const warnList = ref([
   { id: 1, name: '康师傅方便面', stock: 30, min: 50 },

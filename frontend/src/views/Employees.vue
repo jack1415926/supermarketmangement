@@ -67,7 +67,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { employeeAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showForm = ref(false)
@@ -75,12 +76,13 @@ const isEdit = ref(false)
 const editId = ref(null)
 const form = ref({ name: '', phone: '', position: '', hireDate: '', status: '在职' })
 
-function fetchList() {
-  list.value = [
-    { id: 1, employeeNo: 'EMP001', name: '张三', phone: '13800001111', position: '收银员', hireDate: '2025-03-01', status: '在职' },
-    { id: 2, employeeNo: 'EMP002', name: '李四', phone: '13800002222', position: '管理员', hireDate: '2025-01-15', status: '在职' },
-    { id: 3, employeeNo: 'EMP003', name: '王五', phone: '13800003333', position: '收银员', hireDate: '2025-06-01', status: '离职' }
-  ]
+async function onMounted(() => fetchList()) {
+  try {
+    const res = await employeeAPI.list({ keyword: keyword.value })
+    list.value = res.data || []
+  } catch (err) {
+    console.error('获取员工列表失败', err)
+  }
 }
 function openAdd() {
   isEdit.value = false; editId.value = null
@@ -92,17 +94,22 @@ function openEdit(item) {
   form.value = { name: item.name, phone: item.phone, position: item.position, hireDate: item.hireDate, status: item.status }
   showForm.value = true
 }
-function handleSave() {
+async function handleSave() {
   if (!form.value.name) { alert('请输入姓名'); return }
-  if (isEdit.value) {
-    const target = list.value.find(i => i.id === editId.value)
-    if (target) Object.assign(target, form.value)
-  } else {
-    list.value.push({ id: Date.now(), employeeNo: 'EMP' + Date.now().toString().slice(-3), ...form.value })
+  try {
+    if (isEdit.value) {
+      await employeeAPI.update(editId.value, form.value)
+    } else {
+      await employeeAPI.create(form.value)
+    }
+    showForm.value = false
+    onMounted(() => fetchList())
+  } catch (err) {
+    console.error('保存失败', err)
+    alert('保存失败')
   }
-  showForm.value = false
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>

@@ -69,7 +69,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { saleAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showDetail = ref(false)
@@ -77,22 +78,25 @@ const showShiftSummary = ref(false)
 const detailData = ref({})
 const shiftList = ref([])
 
-function fetchList() {
-  list.value = [
-    { id: 1, flowNo: 'LS20240620001', totalAmount: '156.50', discountAmount: '7.83', receivedAmount: '160.00', changeAmount: '3.50', cashier: '张三', saleTime: '2026-06-20 14:30' },
-    { id: 2, flowNo: 'LS20240620002', totalAmount: '89.00', discountAmount: '0', receivedAmount: '100.00', changeAmount: '11.00', cashier: '李四', saleTime: '2026-06-20 15:12' },
-    { id: 3, flowNo: 'LS20240620003', totalAmount: '320.00', discountAmount: '16.00', receivedAmount: '320.00', changeAmount: '0', cashier: '张三', saleTime: '2026-06-20 16:45' },
-  ]
-  shiftList.value = [
-    { name: '张三', count: 25, total: '4560.00' },
-    { name: '李四', count: 18, total: '3200.00' },
-  ]
+async function onMounted(() => fetchList()) {
+  try {
+    const res = await saleAPI.list({ keyword: keyword.value })
+    list.value = (res.data || []).map(s => ({
+      ...s,
+      cashier: s.cashier?.displayName || s.cashier?.username || (typeof s.cashier === 'string' ? s.cashier : ''),
+      saleTime: s.createdAt || s.saleTime
+    }))
+    const summary = await saleAPI.dailySummary()
+    shiftList.value = summary.data || []
+  } catch (err) {
+    console.error('获取销售记录失败', err)
+  }
 }
 function openDetail(item) {
   detailData.value = { ...item, items: [{ id: 1, name: '可口可乐 330ml', quantity: 3, price: 3.5 }, { id: 2, name: '康师傅方便面', quantity: 2, price: 4 }] }
   showDetail.value = true
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>

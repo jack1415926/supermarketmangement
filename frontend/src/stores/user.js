@@ -13,7 +13,17 @@ const USER_KEY = 'supermarket_user'
 export const useUserStore = defineStore('user', () => {
   // 从 localStorage 恢复登录状态（刷新页面不丢失）
   const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-  const user = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
+  const user = ref(loadUser())
+
+// 从 localStorage 恢复用户信息并转换角色格式
+function loadUser() {
+  const raw = JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+  if (raw && raw.role) {
+    const ROLE_MAP = { ADMIN: 'superadmin', MANAGER: 'admin', CASHIER: 'cashier' }
+    raw.role = ROLE_MAP[raw.role] || raw.role
+  }
+  return raw
+}
 
   // 计算属性：是否已登录
   const isLoggedIn = computed(() => !!token.value)
@@ -28,14 +38,21 @@ export const useUserStore = defineStore('user', () => {
    * @param {string} password - 密码
    * @returns {object} 用户信息
    */
-  async function login(username, password) {
+  
+// 后端角色格式（ADMIN/MANAGER/CASHIER）→ 前端角色格式（superadmin/admin/cashier）
+const ROLE_MAP = { ADMIN: 'superadmin', MANAGER: 'admin', CASHIER: 'cashier' }
+
+async function login(username, password) {
     const res = await request.post('/auth/login', { username, password })
     token.value = res.data.token
     user.value = res.data.user
     // 持久化到 localStorage
     localStorage.setItem(TOKEN_KEY, res.data.token)
-    localStorage.setItem(USER_KEY, JSON.stringify(res.data.user))
-    return res.data.user
+    // 转换角色格式：后端 ADMIN → 前端 superadmin
+    const mapped = { ...res.data.user, role: ROLE_MAP[res.data.user.role] || res.data.user.role }
+    user.value = mapped
+    localStorage.setItem(USER_KEY, JSON.stringify(mapped))
+    return mapped
   }
 
   /** 获取当前用户最新信息（刷新用户状态） */

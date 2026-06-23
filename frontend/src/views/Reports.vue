@@ -72,7 +72,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { reportAPI } from '@/api'
 
 const tab = ref('ranking')
 const monthTotal = ref('45,680.00')
@@ -80,22 +81,42 @@ const monthOrders = ref(356)
 const avgOrder = ref('128.31')
 
 // 排行榜数据
-const rankingList = ref([
-  { id: 1, name: '可口可乐 330ml', quantity: 520, amount: '1,820.00' },
-  { id: 2, name: '康师傅方便面', quantity: 380, amount: '1,520.00' },
-  { id: 3, name: '农夫山泉 550ml', quantity: 350, amount: '700.00' },
-  { id: 4, name: '奥利奥饼干', quantity: 280, amount: '2,520.00' },
-  { id: 5, name: '中华牙膏', quantity: 220, amount: '2,860.00' },
-])
+const rankingList = ref([])
+
+async function loadData() {
+  try {
+    // 加载销售排行榜
+    const ranking = await reportAPI.salesRanking({})
+    rankingList.value = ranking.data || []
+    // 加载月度统计
+    const monthly = await reportAPI.salesMonthly({})
+    if (monthly.data) {
+      monthTotal.value = Number(monthly.data.totalAmount || 0).toFixed(2)
+      monthOrders.value = monthly.data.orderCount || 0
+      avgOrder.value = monthly.data.orderCount > 0 ? (monthly.data.totalAmount / monthly.data.orderCount).toFixed(2) : '0.00'
+    }
+    // 加载业绩
+    loadPerformance()
+  } catch (err) {
+    console.error('加载分析数据失败', err)
+  }
+}
+onMounted(() => loadData())
 
 // 业绩数据
 const performanceList = ref([])
-function loadPerformance() {
-  performanceList.value = [
-    { name: '张三', count: 125, total: '18,500.00', percent: 40 },
-    { name: '李四', count: 98, total: '15,200.00', percent: 33 },
-    { name: '王五', count: 133, total: '11,980.00', percent: 27 },
-  ]
+async function loadPerformance() {
+  try {
+    const res = await reportAPI.cashierPerformance({})
+    const items = res.data || []
+    const grandTotal = items.reduce((s, i) => s + (Number(i.total) || 0), 0)
+    performanceList.value = items.map(i => ({
+      ...i,
+      percent: grandTotal > 0 ? Math.round((Number(i.total) || 0) / grandTotal * 100) : 0
+    }))
+  } catch (err) {
+    console.error('加载业绩失败', err)
+  }
 }
 </script>
 

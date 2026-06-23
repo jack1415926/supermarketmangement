@@ -86,7 +86,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { purchaseAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showAdd = ref(false)
@@ -94,25 +95,40 @@ const showDetail = ref(false)
 const detailData = ref({})
 const purchaseForm = ref({ supplier: '', product: '', quantity: 1, price: 0, purchaseDate: new Date().toISOString().split('T')[0] })
 
-function fetchList() {
-  list.value = [
-    { id: 1, purchaseNo: 'JH202406001', supplier: '统一食品有限公司', itemCount: 3, totalAmount: 5600.00, purchaseDate: '2026-06-15' },
-    { id: 2, purchaseNo: 'JH202406002', supplier: '日用品批发市场', itemCount: 5, totalAmount: 3200.00, purchaseDate: '2026-06-18' },
-  ]
+async function onMounted(() => fetchList()) {
+  try {
+    const res = await purchaseAPI.list({ keyword: keyword.value })
+    list.value = (res.data || []).map(p => ({
+      ...p,
+      supplier: p.supplier?.name || (typeof p.supplier === 'string' ? p.supplier : ''),
+      itemCount: p.items?.length || p.itemCount || 0
+    }))
+  } catch (err) {
+    console.error('获取进货列表失败', err)
+  }
 }
 function openAdd() { purchaseForm.value = { supplier: '', product: '', quantity: 1, price: 0, purchaseDate: new Date().toISOString().split('T')[0] }; showAdd.value = true }
-function handlePurchase() {
+async function handlePurchase() {
   if (!purchaseForm.value.supplier || !purchaseForm.value.product) { alert('请填写供应商和商品名称'); return }
-  const total = purchaseForm.value.quantity * purchaseForm.value.price
-  list.value.unshift({ id: Date.now(), purchaseNo: 'JH' + Date.now().toString().slice(-6), supplier: purchaseForm.value.supplier, itemCount: 1, totalAmount: total.toFixed(2), purchaseDate: purchaseForm.value.purchaseDate })
-  showAdd.value = false
-  alert('入库成功')
+  try {
+    await purchaseAPI.create({
+      productId: purchaseForm.value.productId,
+      quantity: purchaseForm.value.quantity,
+      purchasePrice: purchaseForm.value.price
+    })
+    showAdd.value = false
+    alert('入库成功')
+    onMounted(() => fetchList())
+  } catch (err) {
+    console.error('入库失败', err)
+    alert('入库失败')
+  }
 }
 function openDetail(item) {
   detailData.value = { ...item, items: [{ id: 1, product: '商品详情待开发', quantity: item.itemCount, price: (item.totalAmount / item.itemCount).toFixed(2) }] }
   showDetail.value = true
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>

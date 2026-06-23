@@ -124,7 +124,8 @@
 </div>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { memberAPI } from '@/api'
 
 const keyword = ref('')
 const list = ref([])
@@ -148,12 +149,13 @@ const historyList = ref([])
 const historyTotal = ref('0')
 
 /** 拉取会员列表（当前假数据） */
-function fetchList() {
-  list.value = [
-    { id: 1, cardNo: 'M20240001', name: '张三', phone: '13800001111', totalSpent: 2560.00, validUntil: '2027-06-15' },
-    { id: 2, cardNo: 'M20240002', name: '李四', phone: '13800002222', totalSpent: 890.50, validUntil: '2026-01-20' },
-    { id: 3, cardNo: 'M20240003', name: '王五', phone: '13800003333', totalSpent: 5200.00, validUntil: '2027-12-01' }
-  ]
+async function onMounted(() => fetchList()) {
+  try {
+    const res = await memberAPI.list({ keyword: keyword.value })
+    list.value = res.data || []
+  } catch (err) {
+    console.error('获取会员列表失败', err)
+  }
 }
 
 /** 判断有效期是否已过期 */
@@ -218,7 +220,7 @@ function handleRenew(id) {
   }
 }
 
-fetchList()
+onMounted(() => fetchList())
 </script>
 <style scoped>
 .page-container { background: #fff; border-radius: 8px; padding: 20px; }
