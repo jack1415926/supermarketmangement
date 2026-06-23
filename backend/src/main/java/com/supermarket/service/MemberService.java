@@ -13,6 +13,7 @@ import com.supermarket.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,7 @@ public class MemberService {
     /** 分页查询，支持姓名搜索 */
     @Transactional(readOnly = true)
     public PageDTO<Member> findAll(int page, int size, String keyword) {
-        PageRequest pageable = PageRequest.of(page, size);
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Member> result;
         if (keyword != null && !keyword.isBlank()) {
             result = memberRepository.findByNameContaining(keyword, pageable);
@@ -41,6 +42,7 @@ public class MemberService {
         return PageDTO.from(result);
     }
 
+    @Transactional(readOnly = true)
     public Member findById(Long id) {
         return memberRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("会员不存在: id=" + id));
@@ -57,9 +59,17 @@ public class MemberService {
         member.setPhone(request.getPhone());
         member.setIdCard(request.getIdCard());
         member.setGender(request.getGender());
-        // 卡号：用户指定或自动生成 "M" + 当前时间毫秒数
-        member.setCardNo(request.getCardNo() != null ? request.getCardNo()
-            : "M" + System.currentTimeMillis());
+        // 卡号：用户指定或自动生成，需检查唯一性
+        if (request.getCardNo() != null && !request.getCardNo().isBlank()) {
+            if (memberRepository.existsByCardNo(request.getCardNo())) {
+                throw new IllegalArgumentException("会员卡号已被使用: " + request.getCardNo());
+            }
+            member.setCardNo(request.getCardNo());
+        } else {
+            // 自动生成：M + 时间戳 + 随机数
+            member.setCardNo("M" + System.currentTimeMillis()
+                + String.format("%04d", (int)(Math.random() * 10000)));
+        }
         member.setPoints(0);
         member.setTotalSpent(BigDecimal.ZERO);
         member.setValidUntil(LocalDateTime.now().plusYears(1));
@@ -80,6 +90,7 @@ public class MemberService {
      * 会员卡验证（POS 刷卡时调用）。
      * 返回会员信息和折扣率。
      */
+    @Transactional(readOnly = true)
     public MemberVerifyResponse verifyByCardNo(String cardNo) {
         Member member = memberRepository.findByCardNo(cardNo)
             .orElseThrow(() -> new NoSuchElementException("会员卡不存在: " + cardNo));

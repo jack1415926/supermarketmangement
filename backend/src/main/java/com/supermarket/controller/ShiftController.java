@@ -37,11 +37,14 @@ public class ShiftController {
         return Result.success("交班成功", shiftService.endShift(userDetails.getUsername()));
     }
 
-    /** 查询当前活跃班次 */
+    /** 查询当前活跃班次，无活跃班次时返回 404 */
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('CASHIER','MANAGER','ADMIN')")
     public Result<Shift> getActiveShift(@AuthenticationPrincipal UserDetails userDetails) {
         Shift shift = shiftService.getActiveShift(userDetails.getUsername());
+        if (shift == null) {
+            return Result.error(404, "没有活跃的班次");
+        }
         return Result.success(shift);
     }
 

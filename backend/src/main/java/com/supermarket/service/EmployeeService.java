@@ -32,6 +32,7 @@ public class EmployeeService {
     }
 
     /** 按职位查询（如查询所有收银员） */
+    @Transactional(readOnly = true)
     public List<Employee> findByPosition(String position) {
         return employeeRepository.findByPosition(position);
     }

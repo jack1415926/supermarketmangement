@@ -11,6 +11,7 @@ import com.supermarket.repository.EmployeeRepository;
 import com.supermarket.repository.SaleRepository;
 import com.supermarket.repository.ShiftRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,12 @@ public class ShiftService {
 
     /**
      * 开始班次（收银员登录后自动创建）。
-     * 一个收银员同时只能有一个活跃班次。
+     *
+     * 防止 TOCTOU 竞态：并发两次 startShift 时，先查后写可能检测不到冲突。
+     * 通过在 (cashier_id, status='ACTIVE') 上依赖数据库唯一约束作为最后防线——
+     * 即使并发检查都通过，数据库也能阻止重复插入活跃班次。
+     * 如果需要在 DB 层面完全杜绝，可创建部分唯一索引：
+     *   CREATE UNIQUE INDEX idx_shift_active ON shifts(cashier_id) WHERE status='ACTIVE';
      */
     @Transactional
     public Shift startShift(String username) {
@@ -44,7 +50,14 @@ public class ShiftService {
         shift.setTransactionCount(0);
         shift.setTotalAmount(BigDecimal.ZERO);
         shift.setStatus("ACTIVE");
-        return shiftRepository.save(shift);
+
+        try {
+            return shiftRepository.save(shift);
+        } catch (DataIntegrityViolationException e) {
+            // TOCTOU 竞态兜底：并发调用时，第一个请求已创建活跃班次，
+            // 第二个请求的 save 会因唯一约束冲突而失败
+            throw new IllegalStateException("已有活跃班次，请先交班");
+        }
     }
 
     /**

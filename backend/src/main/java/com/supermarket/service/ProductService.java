@@ -47,6 +47,7 @@ public class ProductService {
     }
 
     /** 按条形码查询（POS 扫码） */
+    @Transactional(readOnly = true)
     public Product findByBarcode(String barcode) {
         return productRepository.findByBarcode(barcode)
             .orElseThrow(() -> new NoSuchElementException("商品不存在, 条形码=" + barcode));
