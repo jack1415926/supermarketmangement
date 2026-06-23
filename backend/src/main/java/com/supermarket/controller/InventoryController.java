@@ -7,6 +7,7 @@ package com.supermarket.controller;
 
 import com.supermarket.common.Result;
 import com.supermarket.dto.InventoryDTO;
+import com.supermarket.dto.PageDTO;
 import com.supermarket.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,11 +23,14 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
 
-    /** 查询所有商品的库存信息 */
+    /** 分页查询库存信息，避免一次性加载所有商品 */
     @GetMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
-    public Result<List<InventoryDTO>> findAll() {
-        return Result.success(inventoryService.findAll());
+    public Result<PageDTO<InventoryDTO>> findAll(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return Result.success(inventoryService.findAll(page, size));
     }
 
     /** 更新商品库存预警阈值 */

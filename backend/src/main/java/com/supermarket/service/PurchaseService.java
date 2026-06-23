@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -27,26 +26,25 @@ import java.util.*;
 public class PurchaseService {
 
     private final PurchaseRepository purchaseRepository;
-    private final PurchaseItemRepository purchaseItemRepository;
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
     private final EmployeeRepository employeeRepository;
 
     /**
-     * 创建进货单。
+     * 创建进货单（自动入库更新库存）。
+     *
      * 流程：
-     *   1. 校验供应商和商品
-     *   2. 计算总金额
-     *   3. 创建进货单和明细
-     *   4. 更新商品库存（入库）
+     *   1. 查询经办人和供应商
+     *   2. 校验商品存在
+     *   3. 计算总金额、更新库存和进价
+     *   4. 创建进货单（cascade 自动保存明细）
+     *   5. 批量保存商品库存变更
      */
     @Transactional
     public Purchase create(PurchaseRequest request, String cashierUsername) {
-        // 查找经办人
-        Employee employee = employeeRepository.findAll().stream()
-            .filter(e -> e.getUser() != null && e.getUser().getUsername().equals(cashierUsername))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("找不到员工信息"));
+        // 使用数据库索引查询，避免全表扫描
+        Employee employee = employeeRepository.findByUserUsername(cashierUsername)
+            .orElseThrow(() -> new IllegalStateException("找不到员工信息: " + cashierUsername));
 
         Supplier supplier = supplierRepository.findById(request.getSupplierId())
             .orElseThrow(() -> new NoSuchElementException("供应商不存在"));
@@ -60,7 +58,7 @@ public class PurchaseService {
         purchase.setRemark(request.getRemark());
 
         BigDecimal totalAmount = BigDecimal.ZERO;
-        List<PurchaseItem> items = new ArrayList<>();
+        List<Product> productsToUpdate = new ArrayList<>();
 
         for (PurchaseRequest.PurchaseItemRequest itemReq : request.getItems()) {
             Product product = productRepository.findById(itemReq.getProductId())
@@ -72,30 +70,29 @@ public class PurchaseService {
             totalAmount = totalAmount.add(subtotal);
 
             PurchaseItem item = new PurchaseItem();
-            item.setPurchase(purchase);
             item.setProduct(product);
             item.setQuantity(itemReq.getQuantity());
             item.setPurchasePrice(price);
             item.setSubtotal(subtotal);
-            items.add(item);
+            purchase.addItem(item); // 维护双向关系
 
-            // 更新商品库存和进价
+            // 更新库存和进价（收集后批量保存）
             product.setStock(product.getStock() + itemReq.getQuantity());
             product.setPurchasePrice(price);
-            productRepository.save(product);
+            productsToUpdate.add(product);
         }
 
         purchase.setTotalAmount(totalAmount);
-        purchase = purchaseRepository.save(purchase);
+        purchase = purchaseRepository.save(purchase); // cascade = ALL，明细自动保存
 
-        for (PurchaseItem item : items) {
-            purchaseItemRepository.save(item);
-        }
-        purchase.setItems(items);
+        // 批量更新库存
+        productRepository.saveAll(productsToUpdate);
+
         return purchase;
     }
 
     /** 分页查询进货记录 */
+    @Transactional(readOnly = true)
     public PageDTO<Purchase> findAll(int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Purchase> result = purchaseRepository.findAll(pageable);
@@ -103,6 +100,7 @@ public class PurchaseService {
     }
 
     /** 按 ID 查询 */
+    @Transactional(readOnly = true)
     public Purchase findById(Long id) {
         return purchaseRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("进货单不存在: id=" + id));
@@ -112,6 +110,7 @@ public class PurchaseService {
      * 进货计划：查询所有库存低于下限的商品，建议补货。
      * 每个商品建议进货数量 = (minStock * 2) - stock（即补到下限的两倍）。
      */
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getPurchasePlan() {
         List<Product> lowStockProducts = productRepository.findByStockLessThanEqualMinStock();
         List<Map<String, Object>> plan = new ArrayList<>();
@@ -132,8 +131,10 @@ public class PurchaseService {
         return plan;
     }
 
+    /** 生成进货单号：P + 年月日 + UUID 前 8 位 */
     private String generatePurchaseNo() {
-        return "P" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-            + String.format("%04d", System.currentTimeMillis() % 10000);
+        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "P" + datePart + uid;
     }
 }

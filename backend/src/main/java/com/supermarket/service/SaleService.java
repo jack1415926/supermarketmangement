@@ -31,13 +31,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SaleService {
 
     private final SaleRepository saleRepository;
-    private final SaleItemRepository saleItemRepository;
     private final ProductRepository productRepository;
     private final MemberRepository memberRepository;
     private final EmployeeRepository employeeRepository;
@@ -51,8 +51,8 @@ public class SaleService {
      *   3. 处理会员折扣（95 折）
      *   4. 计算总金额、折扣、应收、找零
      *   5. 生成交易流水号
-     *   6. 创建销售单 + 明细
-     *   7. 扣减库存
+     *   6. 创建销售单（级联自动保存明细）
+     *   7. 批量扣减库存
      *   8. 更新会员累计消费和积分
      *
      * @Transactional 保证整个流程在一个数据库事务中执行。
@@ -64,19 +64,14 @@ public class SaleService {
      */
     @Transactional
     public SaleResponse checkout(SaleRequest request, String cashierUsername) {
-        // ========== Step 1: 查询收银员和会员 ==========
-        // 注意：这里用 employeeRepository 的关联 user 字段来查
-        // 简化做法：直接通过 username 匹配（user 的 username == cashierUsername）
-        Employee cashier = employeeRepository.findAll().stream()
-            .filter(e -> e.getUser() != null && e.getUser().getUsername().equals(cashierUsername))
-            .findFirst()
+        // ========== Step 1: 查询收银员（走数据库索引，不用全表扫描） ==========
+        Employee cashier = employeeRepository.findByUserUsername(cashierUsername)
             .orElseThrow(() -> new IllegalStateException("找不到收银员信息: " + cashierUsername));
 
         Member member = null;
         if (request.getMemberCardNo() != null && !request.getMemberCardNo().isBlank()) {
             member = memberRepository.findByCardNo(request.getMemberCardNo())
                 .orElseThrow(() -> new IllegalArgumentException("会员卡不存在: " + request.getMemberCardNo()));
-            // 检查会员卡是否有效
             if (member.getStatus() != 1) {
                 throw new IllegalArgumentException("会员卡已注销");
             }
@@ -87,6 +82,7 @@ public class SaleService {
 
         // ========== Step 2: 校验商品和库存 ==========
         List<SaleItem> items = new ArrayList<>();
+        List<Product> productsToUpdate = new ArrayList<>(); // 收集需要更新库存的商品
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (SaleRequest.SaleItemRequest itemReq : request.getItems()) {
@@ -101,26 +97,27 @@ public class SaleService {
                     "库存不足: " + product.getName() + " 当前库存 " + product.getStock() + "，需要 " + itemReq.getQuantity());
             }
 
-            // 计算小计
             BigDecimal unitPrice = product.getSalePrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(subtotal);
 
-            // 创建销售明细
             SaleItem item = new SaleItem();
             item.setProduct(product);
             item.setQuantity(itemReq.getQuantity());
             item.setSalePrice(unitPrice);
             item.setSubtotal(subtotal);
             items.add(item);
+
+            // 预扣库存，收集到列表最后批量 save
+            product.setStock(product.getStock() - itemReq.getQuantity());
+            productsToUpdate.add(product);
         }
 
         // ========== Step 3: 计算折扣和找零 ==========
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (member != null) {
-            // 会员享受 95 折
             discountAmount = totalAmount.multiply(new BigDecimal("0.05"))
-                .setScale(2, RoundingMode.HALF_UP); // 四舍五入到分
+                .setScale(2, RoundingMode.HALF_UP);
         }
         BigDecimal finalAmount = totalAmount.subtract(discountAmount);
         BigDecimal changeAmount = request.getReceivedAmount().subtract(finalAmount);
@@ -130,10 +127,10 @@ public class SaleService {
                 "实收金额不足：应收 " + finalAmount + "，实收 " + request.getReceivedAmount());
         }
 
-        // ========== Step 4: 生成流水号 ==========
+        // ========== Step 4: 生成流水号（UUID 防重复） ==========
         String flowNo = generateFlowNo();
 
-        // ========== Step 5: 创建销售单 ==========
+        // ========== Step 5: 创建销售单（cascade 自动保存明细） ==========
         Sale sale = new Sale();
         sale.setFlowNo(flowNo);
         sale.setCashier(cashier);
@@ -145,36 +142,29 @@ public class SaleService {
         sale.setPaymentMethod(request.getPaymentMethod());
         sale.setStatus("COMPLETED");
         sale.setCreatedAt(LocalDateTime.now());
-        sale = saleRepository.save(sale);
 
-        // ========== Step 6: 保存明细 ==========
+        // 设置双向关系，JPA cascade 会自动保存明细，无需手动 save items
         for (SaleItem item : items) {
-            item.setSale(sale);
-            saleItemRepository.save(item);
+            sale.addItem(item);
         }
-        sale.setItems(items);
+        sale = saleRepository.save(sale); // cascade = ALL，明细自动保存
 
-        // ========== Step 7: 扣减库存 ==========
-        for (SaleItem item : items) {
-            Product product = item.getProduct();
-            product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
-        }
+        // ========== Step 6: 批量扣减库存（一次性 saveAll） ==========
+        productRepository.saveAll(productsToUpdate);
 
-        // ========== Step 8: 更新会员信息 ==========
+        // ========== Step 7: 更新会员信息 ==========
         if (member != null) {
             member.setTotalSpent(member.getTotalSpent().add(finalAmount));
-            // 积分规则：每消费 10 元积 1 分
             int earnedPoints = finalAmount.divide(BigDecimal.TEN, 0, RoundingMode.DOWN).intValue();
             member.setPoints(member.getPoints() + earnedPoints);
             memberRepository.save(member);
         }
 
-        // ========== 构建响应 ==========
         return buildResponse(sale, items);
     }
 
     /** 分页查询销售记录 */
+    @Transactional(readOnly = true)
     public PageDTO<Sale> findAll(int page, int size, LocalDate date) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Sale> result;
@@ -189,12 +179,14 @@ public class SaleService {
     }
 
     /** 按 ID 查询销售单详情 */
+    @Transactional(readOnly = true)
     public Sale findById(Long id) {
         return saleRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("销售单不存在: id=" + id));
     }
 
     /** 当日交班汇总 */
+    @Transactional(readOnly = true)
     public java.util.Map<String, Object> getDailySummary(LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(LocalTime.MAX);
@@ -209,12 +201,14 @@ public class SaleService {
         return summary;
     }
 
-    /** 生成流水号：S + 年月日 + 4 位序号 */
+    /**
+     * 生成流水号：S + 年月日 + UUID 前 8 位。
+     * 使用 UUID 避免高并发下时间戳取模导致的重复。
+     */
     private String generateFlowNo() {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        // 用当前秒数 + 3 位随机数作为序号
-        String seq = String.format("%04d", System.currentTimeMillis() % 10000);
-        return "S" + datePart + seq;
+        String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "S" + datePart + uid;
     }
 
     /** 构建结账响应 */

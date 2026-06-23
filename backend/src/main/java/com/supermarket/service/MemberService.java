@@ -29,6 +29,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
 
     /** 分页查询，支持姓名搜索 */
+    @Transactional(readOnly = true)
     public PageDTO<Member> findAll(int page, int size, String keyword) {
         PageRequest pageable = PageRequest.of(page, size);
         Page<Member> result;

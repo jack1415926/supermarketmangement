@@ -15,6 +15,14 @@ import java.util.Optional;
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
+    /**
+     * 根据关联的 User 的 username 查找员工。
+     * Spring Data JPA 会自动解析嵌套属性：Employee.user.username。
+     * 生成 SQL：SELECT * FROM employees e JOIN users u ON e.user_id = u.id WHERE u.username = ?
+     * 比 findAll() + stream filter 高效，直接走数据库索引。
+     */
+    Optional<Employee> findByUserUsername(String username);
+
     /** 根据手机号查找员工（手机号唯一） */
     Optional<Employee> findByPhone(String phone);
 

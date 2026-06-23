@@ -21,11 +21,13 @@ public class SupplierService {
     private final SupplierRepository supplierRepository;
 
     /** 查询所有合作中的供应商 */
+    @Transactional(readOnly = true)
     public List<Supplier> findAll() {
         return supplierRepository.findByStatus(1);
     }
 
     /** 按 ID 查询 */
+    @Transactional(readOnly = true)
     public Supplier findById(Long id) {
         return supplierRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("供应商不存在: id=" + id));

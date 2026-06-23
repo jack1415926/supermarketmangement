@@ -24,18 +24,8 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    /**
-     * 查询分类树。
-     *
-     * 算法：
-     *   1. 查出所有启用的分类
-     *   2. 按 parentId 分组
-     *   3. 递归构建树：每个节点找到自己的 children
-     *
-     * 为什么不直接递归查数据库？
-     *   - N 次查询效率低（N+1 问题）
-     *   - 分类数量一般不多（<1000），全部加载到内存再构建树效率高
-     */
+    /** 查询分类树（只读操作） */
+    @Transactional(readOnly = true)
     public List<CategoryDTO> findAllAsTree() {
         List<Category> all = categoryRepository.findByStatusOrderBySortOrderAsc(1);
         // 转为 DTO 列表
@@ -59,6 +49,7 @@ public class CategoryService {
     }
 
     /** 按 ID 查询单个分类 */
+    @Transactional(readOnly = true)
     public Category findById(Long id) {
         return categoryRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("分类不存在: id=" + id));

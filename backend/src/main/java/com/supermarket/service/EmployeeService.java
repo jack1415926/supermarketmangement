@@ -20,10 +20,12 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
+    @Transactional(readOnly = true)
     public List<Employee> findAll() {
         return employeeRepository.findByStatus(1);
     }
 
+    @Transactional(readOnly = true)
     public Employee findById(Long id) {
         return employeeRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("员工不存在: id=" + id));

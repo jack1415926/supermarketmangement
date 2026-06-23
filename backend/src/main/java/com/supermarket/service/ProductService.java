@@ -26,12 +26,8 @@ public class ProductService {
 
     /**
      * 分页查询商品列表，支持关键字搜索。
-     *
-     * @param page 页码（从 0 开始）
-     * @param size 每页大小
-     * @param keyword 搜索关键字（可选，null 表示全部）
-     * @return 分页结果
      */
+    @Transactional(readOnly = true)
     public PageDTO<ProductDTO> findAll(int page, int size, String keyword) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Product> productPage;
@@ -44,6 +40,7 @@ public class ProductService {
     }
 
     /** 按 ID 查询单个商品 */
+    @Transactional(readOnly = true)
     public Product findById(Long id) {
         return productRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("商品不存在: id=" + id));

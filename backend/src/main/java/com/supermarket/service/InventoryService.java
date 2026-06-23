@@ -1,14 +1,18 @@
 /**
- * 库存服务 —— 库存查询、预警阈值设置、盘点。
+ * 库存服务 —— 库存查询（分页）、预警阈值设置、盘点。
  *
  * @author 徐磊
  */
 package com.supermarket.service;
 
 import com.supermarket.dto.InventoryDTO;
+import com.supermarket.dto.PageDTO;
 import com.supermarket.entity.Product;
 import com.supermarket.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +27,18 @@ public class InventoryService {
 
     private final ProductRepository productRepository;
 
-    /** 查询所有商品的库存信息 */
-    public List<InventoryDTO> findAll() {
-        return productRepository.findAll().stream()
-            .map(this::toDTO)
-            .collect(Collectors.toList());
+    /**
+     * 分页查询库存信息。
+     * 避免一次性加载所有商品导致内存溢出。
+     */
+    @Transactional(readOnly = true)
+    public PageDTO<InventoryDTO> findAll(int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        Page<Product> productPage = productRepository.findAll(pageable);
+        return PageDTO.from(productPage.map(this::toDTO));
     }
 
-    /** 更新商品的库存预警阈值 */
+    /** 更新商品库存预警阈值 */
     @Transactional
     public void updateThreshold(Long productId, Integer minStock, Integer maxStock) {
         Product product = productRepository.findById(productId)
@@ -40,7 +48,8 @@ public class InventoryService {
         productRepository.save(product);
     }
 
-    /** 库存盘点：检查所有缺货（库存 <= 下限）的商品 */
+    /** 库存盘点：返回所有缺货（库存 <= 下限）的商品 */
+    @Transactional(readOnly = true)
     public List<InventoryDTO> checkInventory() {
         List<Product> lowStock = productRepository.findByStockLessThanEqualMinStock();
         return lowStock.stream().map(this::toDTO).collect(Collectors.toList());
@@ -59,11 +68,9 @@ public class InventoryService {
         dto.setMaxStock(p.getMaxStock());
         dto.setSalePrice(p.getSalePrice());
         dto.setPurchasePrice(p.getPurchasePrice());
-        // 库存金额 = 数量 × 进价
         dto.setStockValue(
             p.getPurchasePrice().multiply(BigDecimal.valueOf(p.getStock()))
         );
-        // 库存状态
         if (p.getStock() <= 0) dto.setStatus("OUT");
         else if (p.getMinStock() != null && p.getStock() <= p.getMinStock()) dto.setStatus("LOW");
         else if (p.getMaxStock() != null && p.getStock() >= p.getMaxStock()) dto.setStatus("HIGH");
