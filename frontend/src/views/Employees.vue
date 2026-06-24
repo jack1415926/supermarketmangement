@@ -1,18 +1,15 @@
-<!--
-  人员管理页面
-  功能：员工列表展示、新增员工、编辑员工信息
--->
+﻿<!-- 人员管理页面：员工列表、新增员工 -->
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <input v-model="keyword" placeholder="搜索员工姓名或工号..." @keyup.enter="fetchList" />
+      <input v-model="keyword" placeholder="搜索员工姓名..." @keyup.enter="fetchList" />
       <button @click="fetchList">搜索</button>
       <button class="btn-add" @click="openAdd">+ 新增员工</button>
     </div>
     <table class="data-table">
       <thead>
         <tr>
-          <th>工号</th>
+          <th>编号</th>
           <th>姓名</th>
           <th>手机号</th>
           <th>职位</th>
@@ -23,15 +20,13 @@
       </thead>
       <tbody>
         <tr v-for="item in list" :key="item.id">
-          <td>{{ item.employeeNo }}</td>
+          <td>{{ item.id }}</td>
           <td>{{ item.name }}</td>
           <td>{{ item.phone }}</td>
           <td>{{ item.position }}</td>
-          <td>{{ item.hireDate }}</td>
-          <td><span :class="item.status === '在职' ? 'status-active' : 'status-inactive'">{{ item.status }}</span></td>
-          <td>
-            <button @click="openEdit(item)">编辑</button>
-          </td>
+          <td>{{ (item.hireDate || '').toString().substring(0, 10) }}</td>
+          <td><span :class="item.status === 1 ? 'status-active' : 'status-inactive'">{{ item.status === 1 ? '在职' : '离职' }}</span></td>
+          <td><button @click="openEdit(item)">编辑</button></td>
         </tr>
       </tbody>
     </table>
@@ -41,22 +36,13 @@
     <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
       <div class="modal-card">
         <h3>{{ isEdit ? '编辑员工' : '新增员工' }}</h3>
-        <div class="form-row">
-          <label>姓名</label>
-          <input v-model="form.name" placeholder="请输入姓名" required />
-        </div>
+        <div class="form-row"><label>姓名</label><input v-model="form.name" placeholder="请输入姓名" /></div>
         <div class="form-row form-row-2col">
           <div><label>手机号</label><input v-model="form.phone" placeholder="请输入手机号" /></div>
           <div><label>职位</label><input v-model="form.position" placeholder="如：收银员" /></div>
         </div>
-        <div class="form-row">
-          <label>入职日期</label>
-          <input v-model="form.hireDate" type="date" />
-        </div>
-        <div class="form-row">
-          <label>状态</label>
-          <select v-model="form.status"><option value="在职">在职</option><option value="离职">离职</option></select>
-        </div>
+        <div class="form-row"><label>入职日期</label><input v-model="form.hireDate" type="date" /></div>
+        <div class="form-row"><label>状态</label><select v-model="form.status"><option :value="1">在职</option><option :value="0">离职</option></select></div>
         <div class="form-buttons">
           <button class="btn-cancel" @click="showForm = false">取消</button>
           <button class="btn-save" @click="handleSave">保存</button>
@@ -69,51 +55,66 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { employeeAPI } from '@/api'
+
 const keyword = ref('')
 const list = ref([])
 const showForm = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
-const form = ref({ name: '', phone: '', position: '', hireDate: '', status: '在职' })
+const form = ref({ name: '', phone: '', position: '', hireDate: '', status: 1 })
 
 async function fetchList() {
   try {
     const res = await employeeAPI.list({ keyword: keyword.value })
-    list.value = res.data || []
-  } catch (err) {
-    console.error('获取员工列表失败', err)
-  }
+    list.value = res.data?.content || res.data?.data || res.data || []
+  } catch (e) { console.error('获取员工列表失败', e) }
 }
+
 function openAdd() {
-  isEdit.value = false; editId.value = null
-  form.value = { name: '', phone: '', position: '', hireDate: '', status: '在职' }
+  isEdit.value = false
+  editId.value = null
+  form.value = { name: '', phone: '', position: '', hireDate: '', status: 1 }
   showForm.value = true
 }
+
 function openEdit(item) {
-  isEdit.value = true; editId.value = item.id
-  form.value = { name: item.name, phone: item.phone, position: item.position, hireDate: item.hireDate, status: item.status }
+  isEdit.value = true
+  editId.value = item.id
+  form.value = {
+    name: item.name || '',
+    phone: item.phone || '',
+    position: item.position || '',
+    hireDate: (item.hireDate || '').toString().substring(0, 10),
+    status: item.status != null ? item.status : 1
+  }
   showForm.value = true
 }
+
 async function handleSave() {
   if (!form.value.name) { alert('请输入姓名'); return }
   try {
+    // 只传后端接受的非空字段
+    var data = { name: form.value.name, status: form.value.status }
+    if (form.value.phone) data.phone = form.value.phone
+    if (form.value.position) data.position = form.value.position
+    if (form.value.hireDate) data.hireDate = form.value.hireDate
     if (isEdit.value) {
-      await employeeAPI.update(editId.value, form.value)
+      await employeeAPI.update(editId.value, data)
     } else {
-      await employeeAPI.create(form.value)
+      await employeeAPI.create(data)
     }
     showForm.value = false
-    onMounted(() => fetchList())
-  } catch (err) {
-    console.error('保存失败', err)
-    alert('保存失败')
+    await fetchList()
+  } catch (e) {
+    var msg = (e.response && e.response.data && e.response.data.message) || e.message
+    alert('保存失败：' + msg)
   }
 }
-onMounted(() => fetchList())
+
+onMounted(function() { fetchList() })
 </script>
 
 <style scoped>
-.page-container,.page-toolbar,.data-table,.empty-tip { /* same as products */ }
 .page-container { background: #fff; border-radius: 8px; padding: 20px; }
 .page-toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
 .page-toolbar input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }

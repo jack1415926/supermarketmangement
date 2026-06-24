@@ -2,8 +2,8 @@
   主布局组件
   功能：左侧可折叠侧边栏 + 顶部导航栏 + 根据用户角色动态显示菜单
   角色-菜单对应：
-    cashier (收银员)  → POS收银台
-    admin   (管理员)  → 工作台/商品/进货/库存/会员/人员/供应商/销售/报表
+    cashier (收银员)   → POS收银台 / 交班
+    admin   (管理员)   → 工作台 / POS收银 / 商品/进货/库存/会员/人员/供应商/销售/报表 / 交班
     superadmin(系统管理员) → 管理员所有菜单 + 系统管理
 -->
 <template>
@@ -57,8 +57,8 @@ const roleLabel = computed(() => {
 
 // 菜单配置：每个菜单项指定可访问的角色
 const menuItems = [
-  { path: '/pos',       label: 'POS收银台',   roles: ['cashier'] },
-  { path: '/dashboard', label: '工作台',       roles: ['admin', 'superadmin'] },
+  { path: '/',          label: '工作台',       roles: ['admin', 'superadmin'] },
+  { path: '/pos',       label: 'POS收银台',   roles: ['cashier', 'admin', 'superadmin'] },
   { path: '/products',  label: '商品管理',     roles: ['admin', 'superadmin'] },
   { path: '/members',   label: '会员管理',     roles: ['admin', 'superadmin'] },
   { path: '/employees', label: '人员管理',     roles: ['admin', 'superadmin'] },
@@ -67,7 +67,8 @@ const menuItems = [
   { path: '/inventory', label: '库存管理',     roles: ['admin', 'superadmin'] },
   { path: '/sales',     label: '销售记录',     roles: ['admin', 'superadmin'] },
   { path: '/reports',   label: '销售分析',     roles: ['admin', 'superadmin'] },
-  { path: '/system',    label: '系统管理',     roles: ['superadmin'] }
+  { path: '/system',    label: '系统管理',     roles: ['superadmin'] },
+  { path: '/shift',     label: '交班结算',     roles: ['cashier', 'admin', 'superadmin'] }
 ]
 
 /** 退出登录 */

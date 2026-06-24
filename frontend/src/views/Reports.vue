@@ -40,6 +40,7 @@
         <span>{{ item.quantity }}</span>
         <span>¥{{ item.amount }}</span>
       </div>
+      <div v-if="rankingList.length === 0" class="empty-tip">暂无销售数据</div>
     </div>
 
     <!-- 业绩视图 -->
@@ -67,6 +68,7 @@
           </tr>
         </tbody>
       </table>
+      <div v-if="performanceList.length === 0" class="empty-tip">暂无业绩数据</div>
     </div>
   </div>
 </template>
@@ -76,27 +78,49 @@ import { ref, onMounted } from 'vue'
 import { reportAPI } from '@/api'
 
 const tab = ref('ranking')
-const monthTotal = ref('45,680.00')
-const monthOrders = ref(356)
-const avgOrder = ref('128.31')
+const monthTotal = ref('0.00')
+const monthOrders = ref(0)
+const avgOrder = ref('0.00')
 
 // 排行榜数据
 const rankingList = ref([])
 
+// 获取当月起止日期
+function getMonthRange() {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  // 格式化为 yyyy-MM-dd
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+  return { startDate: fmt(start), endDate: fmt(end) }
+}
+
 async function loadData() {
   try {
+    const range = getMonthRange()
     // 加载销售排行榜
-    const ranking = await reportAPI.salesRanking({})
-    rankingList.value = ranking.data || []
-    // 加载月度统计
-    const monthly = await reportAPI.salesMonthly({})
-    if (monthly.data) {
-      monthTotal.value = Number(monthly.data.totalAmount || 0).toFixed(2)
-      monthOrders.value = monthly.data.orderCount || 0
-      avgOrder.value = monthly.data.orderCount > 0 ? (monthly.data.totalAmount / monthly.data.orderCount).toFixed(2) : '0.00'
-    }
-    // 加载业绩
-    loadPerformance()
+    const ranking = await reportAPI.salesRanking(range)
+    const rankingData = ranking.data || []
+    rankingList.value = rankingData.map(function(item, index) {
+      return {
+        id: item.productId || index,
+        name: '商品' + item.productId,
+        quantity: item.totalQuantity || 0,
+        amount: Number(item.totalAmount || 0).toFixed(2)
+      }
+    })
+    // 加载日销售汇总计算月度统计
+    const daily = await reportAPI.salesDaily(range)
+    const days = daily.data || []
+    let totalAmount = 0
+    let totalCount = 0
+    days.forEach(function(d) {
+      totalAmount += Number(d.totalAmount || 0)
+      totalCount += Number(d.transactionCount || 0)
+    })
+    monthTotal.value = totalAmount.toFixed(2)
+    monthOrders.value = totalCount
+    avgOrder.value = totalCount > 0 ? (totalAmount / totalCount).toFixed(2) : '0.00'
   } catch (err) {
     console.error('加载分析数据失败', err)
   }
@@ -107,13 +131,18 @@ onMounted(() => loadData())
 const performanceList = ref([])
 async function loadPerformance() {
   try {
-    const res = await reportAPI.cashierPerformance({})
+    const range = getMonthRange()
+    const res = await reportAPI.cashierPerformance(range)
     const items = res.data || []
-    const grandTotal = items.reduce((s, i) => s + (Number(i.total) || 0), 0)
-    performanceList.value = items.map(i => ({
-      ...i,
-      percent: grandTotal > 0 ? Math.round((Number(i.total) || 0) / grandTotal * 100) : 0
-    }))
+    const grandTotal = items.reduce(function(s, i) { return s + (Number(i.totalAmount || i.total) || 0) }, 0)
+    performanceList.value = items.map(function(i) {
+      return {
+        name: '收银员' + (i.cashierId || ''),
+        count: i.transactionCount || 0,
+        total: Number(i.totalAmount || i.total || 0).toFixed(2),
+        percent: grandTotal > 0 ? Math.round((Number(i.totalAmount || i.total) || 0) / grandTotal * 100) : 0
+      }
+    })
   } catch (err) {
     console.error('加载业绩失败', err)
   }
@@ -148,15 +177,15 @@ async function loadPerformance() {
 .rank-badge { width: 28px; height: 28px; line-height: 28px; border-radius: 50%; text-align: center; font-size: 13px; margin: 0 auto; }
 .rank-1 { background: #f39c12; color: #fff; }
 .rank-2 { background: #bdc3c7; color: #fff; }
-.rank-3 { background: #e67e22; color: #fff; }
+.rank-3 { background: #cd7f32; color: #fff; }
+
+.empty-tip { text-align: center; padding: 60px; color: #999; font-size: 15px; }
 
 /* 业绩表格 */
-.data-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .data-table th { background: #f5f6fa; padding: 12px; text-align: left; font-size: 13px; color: #666; border-bottom: 2px solid #e8e8e8; }
 .data-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-
-/* 百分比条 */
 .percent-bar { display: flex; align-items: center; gap: 8px; }
-.percent-fill { height: 8px; background: #667eea; border-radius: 4px; min-width: 4px; }
-.percent-bar span { font-size: 12px; color: #666; }
+.percent-fill { height: 8px; background: #667eea; border-radius: 4px; min-width: 2px; }
+.percent-bar span { font-size: 12px; color: #666; min-width: 40px; }
 </style>

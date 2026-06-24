@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   库存管理页面
   功能：库存列表（高亮预警）、库存盘点录入、盘点报告
 -->
@@ -87,7 +87,18 @@ const reportList = ref([])
 async function fetchList() {
   try {
     const res = await inventoryAPI.list({ keyword: keyword.value })
-    list.value = res.data || []
+    const rawList = res.data?.content || res.data || []
+    // 将后端返回的字段名映射为前端模板使用的字段名
+    list.value = rawList.map(function(item) {
+      return {
+        id: item.productId,
+        name: item.productName,
+        currentStock: item.stock,
+        stockMin: item.minStock,
+        stockMax: item.maxStock,
+        purchasePrice: item.purchasePrice
+      }
+    })
   } catch (err) {
     console.error('获取库存列表失败', err)
   }
@@ -135,3 +146,4 @@ onMounted(() => fetchList())
 .text-green { color: #27ae60; }
 .text-red { color: #e74c3c; }
 </style>
+

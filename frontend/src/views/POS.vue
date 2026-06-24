@@ -195,7 +195,7 @@ async function searchProduct() {
   if (!keyword.value) return
   try {
     const res = await productAPI.search(keyword.value)
-    results.value = (res.data || []).map(item => ({
+    results.value = (res.data?.content || res.data || []).map(item => ({
       id: item.id,
       name: item.name,
       price: item.salePrice || item.retailPrice || item.price
@@ -276,8 +276,9 @@ async function confirmCheckout() {
         productId: item.id,
         quantity: item.quantity
       })),
+      paymentMethod: 'CASH',
       receivedAmount: Number(receivedAmount.value),
-      memberId: memberInfo.value?.id || null
+      memberCardNo: memberInfo.value?.cardNo || null
     }
     const res = await saleAPI.settle(saleData)
 

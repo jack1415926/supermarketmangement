@@ -28,11 +28,11 @@
         <tr v-for="item in list" :key="item.id">
           <td>{{ item.id }}</td>
           <td>{{ item.name }}</td>
-          <td>{{ item.category?.name || item.category }}</td>
+          <td>{{ item.categoryName || item.category?.name || '' }}</td>
           <td>{{ item.barcode }}</td>
-          <td>¥{{ item.salePrice || item.retailPrice }}</td>
-          <td>¥{{ item.purchasePrice }}</td>
-          <td>{{ item.stock || item.currentStock }}</td>
+          <td>&yen;{{ item.salePrice }}</td>
+          <td>&yen;{{ item.purchasePrice }}</td>
+          <td>{{ item.stock }}</td>
           <td>
             <button @click="openEdit(item)">编辑</button>
             <button @click="handleDelete(item.id)">删除</button>
@@ -59,10 +59,10 @@
         </div>
         <div class="form-row form-row-2col">
           <div><label>条形码</label><input v-model="form.barcode" placeholder="扫码或手动输入" /></div>
-          <div><label>售价 (¥)</label><input v-model.number="form.salePrice" type="number" step="0.01" placeholder="零售单价" /></div>
+          <div><label>售价 (&yen;)</label><input v-model.number="form.salePrice" type="number" step="0.01" placeholder="零售单价" /></div>
         </div>
         <div class="form-row">
-          <label>进价 (¥)</label>
+          <label>进价 (&yen;)</label>
           <input v-model.number="form.purchasePrice" type="number" step="0.01" placeholder="进货单价" />
         </div>
         <div class="form-buttons">
@@ -86,11 +86,12 @@ const editId = ref(null)
 const categoryList = ref([])
 const form = ref({ name: '', categoryId: '', barcode: '', salePrice: 0, purchasePrice: 0 })
 
-/** 拉取商品列表（对接后端 API） */
+/** 拉取商品列表（对接后端分页 API） */
 async function fetchList() {
   try {
     const res = await productAPI.list({ keyword: keyword.value })
-    list.value = res.data || []
+    // 后端返回 PageDTO: { code: 200, data: { content: [...], totalElements: 12 } }
+    list.value = res.data?.content || []
   } catch (err) {
     console.error('获取商品列表失败', err)
   }
@@ -100,7 +101,8 @@ async function fetchList() {
 async function fetchCategories() {
   try {
     const res = await categoryAPI.list()
-    categoryList.value = res.data || []
+    // 兼容分页和非分页两种返回格式
+    categoryList.value = res.data?.content || res.data || []
   } catch (err) {
     console.error('获取分类列表失败', err)
   }
@@ -122,9 +124,9 @@ function openEdit(item) {
   fetchCategories()
   form.value = {
     name: item.name || '',
-    categoryId: item.category?.id || item.categoryId || '',
+    categoryId: item.categoryId || item.category?.id || '',
     barcode: item.barcode || '',
-    salePrice: item.salePrice || item.retailPrice || 0,
+    salePrice: item.salePrice || 0,
     purchasePrice: item.purchasePrice || 0
   }
   showForm.value = true
@@ -134,16 +136,26 @@ function openEdit(item) {
 async function handleSave() {
   if (!form.value.name) { alert('请输入商品名称'); return }
   try {
+    // 后端期望 category 是嵌套对象 { id: categoryId }
+    const payload = {
+      name: form.value.name,
+      barcode: form.value.barcode,
+      salePrice: form.value.salePrice,
+      purchasePrice: form.value.purchasePrice,
+      category: form.value.categoryId ? { id: form.value.categoryId } : null,
+      stock: 0
+    }
     if (isEdit.value) {
-      await productAPI.update(editId.value, form.value)
+      await productAPI.update(editId.value, payload)
     } else {
-      await productAPI.create(form.value)
+      await productAPI.create(payload)
     }
     showForm.value = false
     fetchList()
   } catch (err) {
     console.error('保存失败', err)
-    alert('保存失败，请检查输入信息')
+    const msg = err.response?.data?.message || err.message || '保存失败'
+    alert(msg)
   }
 }
 
