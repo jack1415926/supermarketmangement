@@ -11,7 +11,7 @@
  * 类似 C++ 中的模板类或结构体，用于统一函数的返回类型。
  * 前端只需要解析这一个格式，不用每个接口单独处理。
  *
- * @author 徐磊
+ * @author 殷智元
  */
 package com.supermarket.common;
 

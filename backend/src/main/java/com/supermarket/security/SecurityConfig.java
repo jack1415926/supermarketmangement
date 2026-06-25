@@ -14,7 +14,7 @@
  *
  * 类似 C++ 中的权限中间件配置。
  *
- * @author 徐磊
+ * @author 殷智元
  */
 package com.supermarket.security;
 
@@ -52,27 +52,21 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // ==================== CORS 配置 ====================
-            // 使用已有的 CorsFilter Bean（WebConfig.java 中定义）
-            // 而不是在这里重新配置
+            // 使用已有的 CorsFilter Bean（WebConfig.java 中定义）而不是在这里重新配置
             .cors(cors -> {})
-
             // ==================== CSRF 配置 ====================
             // CSRF（跨站请求伪造）攻击在 Cookie-Session 模式下有风险。
             // 但 RESTful API 用 JWT Token（在 Header 中），不依赖 Cookie，
             // 所以 CSRF 攻击不适用，可以安全地禁用它。
             .csrf(csrf -> csrf.disable())
-
             // ==================== 会话管理 ====================
-            // STATELESS：不创建 HTTP Session。
-            // 每次请求都独立验证 JWT Token，服务器不保存任何会话状态。
+            // STATELESS：不创建 HTTP Session。每次请求都独立验证 JWT Token，服务器不保存任何会话状态。
             // 这是 RESTful API 的最佳实践。
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
             // ==================== URL 权限配置 ====================
-            // 定义哪些 URL 无需认证即可访问。
-            // 其他所有 URL 都需要认证（带 JWT Token）。
+            // 定义哪些 URL 无需认证即可访问。其他所有 URL 都需要认证（带 JWT Token）。
             .authorizeHttpRequests(auth -> auth
                 // 公开接口：登录、健康检查、Swagger UI 文档
                 .requestMatchers(
@@ -86,7 +80,6 @@ public class SecurityConfig {
                 // 其他路径（静态资源等）允许匿名访问
                 .anyRequest().permitAll()
             )
-
             // ==================== 添加 JWT 过滤器 ====================
             // 在 Spring Security 的用户名密码过滤器之前插入我们的 JWT 过滤器。
             // 这样请求会先检查 JWT Token，如果没有 Token 再走其他认证流程。

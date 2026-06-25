@@ -44,39 +44,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;           // JWT 工具
     private final UserRepository userRepository; // 用户查询
 
-    /**
-     * 过滤器的核心方法。
-     * 每个 HTTP 请求都会经过这里。
-     *
-     * @param request  HTTP 请求对象
-     * @param response HTTP 响应对象
-     * @param filterChain 过滤器链（处理完后调用 chain.doFilter 放行）
-     */
-    @Override
-    protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain
-    ) throws ServletException, IOException {
 
-        // Step 1: 从请求头中提取 Token
-        String token = extractTokenFromRequest(request);
-
-        // Step 2: 如果有 Token 且有效，设置认证信息
-        // try-catch 保证即使 setAuthentication() 内部抛出异常（如 NPE），
-        // filterChain.doFilter() 依然会被调用，请求不会"卡住"。
-        try {
-            if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
-                setAuthentication(token);
-            }
-        } catch (Exception e) {
-            // 认证失败不阻塞请求，让后续的 Spring Security URL 权限配置决定是否拒绝
-            // 生产环境应记录日志
-        }
-
-        // Step 3: 放行，继续处理请求
-        filterChain.doFilter(request, response);
-    }
+    
 
     /**
      * 从请求头中提取 JWT Token。
@@ -130,11 +99,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // 例如：ROLE_CASHIER, ROLE_MANAGER, ROLE_ADMIN
         var authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
 
+        // 将 User 实体转换为 Spring Security 标准的 UserDetails 对象
+        // 这样 Controller 中 @AuthenticationPrincipal UserDetails 才能正确注入
+        var userDetails = new org.springframework.security.core.userdetails.User(
+            user.getUsername(),
+            user.getPassword(),
+            Integer.valueOf(1).equals(user.getStatus()),   // enabled
+            true,  // accountNonExpired
+            true,  // credentialsNonExpired
+            true,  // accountNonLocked
+            authorities
+        );
+
         // 创建认证令牌
         // UsernamePasswordAuthenticationToken 是 Spring Security 的标准认证对象
-        // 参数：(主体=用户对象, 凭证=null(Token已校验), 权限列表)
+        // 参数：(主体=UserDetails, 凭证=null(Token已校验), 权限列表)
         UsernamePasswordAuthenticationToken authentication =
-            new UsernamePasswordAuthenticationToken(user, null, authorities);
+            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
         // 将认证信息设置到安全上下文
         // SecurityContextHolder 使用 ThreadLocal 存储，每个请求线程独立
