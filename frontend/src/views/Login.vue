@@ -62,7 +62,7 @@ async function handleLogin() {
     if (user.role === 'cashier') {
       router.push('/pos')
     } else {
-      router.push('/dashboard')
+      router.push('/')
     }
   } catch (err) {
     error.value = err.response?.data?.message || err.message || '登录失败，请检查网络连接'

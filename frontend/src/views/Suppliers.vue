@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   供应商管理页面
   功能：供应商列表、新增供应商、编辑供应商信息
 -->
@@ -16,7 +16,6 @@
           <th>联系人</th>
           <th>联系电话</th>
           <th>地址</th>
-          <th>供应品类</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -26,7 +25,6 @@
           <td>{{ item.contact }}</td>
           <td>{{ item.phone }}</td>
           <td>{{ item.address }}</td>
-          <td>{{ item.category }}</td>
           <td>
             <button @click="openEdit(item)">编辑</button>
           </td>
@@ -50,10 +48,6 @@
           <label>地址</label>
           <input v-model="form.address" placeholder="请输入地址" />
         </div>
-        <div class="form-row">
-          <label>供应商品类别</label>
-          <input v-model="form.category" placeholder="如：饮料、食品" />
-        </div>
         <div class="form-buttons">
           <button class="btn-cancel" @click="showForm = false">取消</button>
           <button class="btn-save" @click="handleSave">保存</button>
@@ -64,29 +58,53 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { supplierAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showForm = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
-const form = ref({ name: '', contact: '', phone: '', address: '', category: '' })
+const form = ref({ name: '', contact: '', phone: '', address: '' })
 
-function fetchList() {
-  list.value = [
-    { id: 1, name: '统一食品有限公司', contact: '赵经理', phone: '021-55667788', address: '上海市浦东新区', category: '饮料、食品' },
-    { id: 2, name: '日用品批发市场', contact: '钱老板', phone: '021-55667799', address: '上海市闵行区', category: '日用品、清洁用品' },
-  ]
+async function fetchList() {
+  try {
+    const res = await supplierAPI.list({ keyword: keyword.value })
+    // 后端供应商 API 返回 data 直接是数组，不像商品那样有 content 分页包装
+    const rawList = res.data?.content || res.data?.data || res.data || []
+    list.value = Array.isArray(rawList) ? rawList : []
+  } catch (err) {
+    console.error('获取供应商列表失败', err)
+  }
 }
-function openAdd() { isEdit.value = false; editId.value = null; form.value = { name: '', contact: '', phone: '', address: '', category: '' }; showForm.value = true }
-function openEdit(item) { isEdit.value = true; editId.value = item.id; form.value = { name: item.name, contact: item.contact, phone: item.phone, address: item.address, category: item.category }; showForm.value = true }
-function handleSave() {
+function openAdd() {
+  isEdit.value = false
+  editId.value = null
+  form.value = { name: '', contact: '', phone: '', address: '' }
+  showForm.value = true
+}
+function openEdit(item) {
+  isEdit.value = true
+  editId.value = item.id
+  form.value = { name: item.name, contact: item.contact, phone: item.phone, address: item.address }
+  showForm.value = true
+}
+async function handleSave() {
   if (!form.value.name) { alert('请输入供应商名称'); return }
-  if (isEdit.value) { const t = list.value.find(i => i.id === editId.value); if (t) Object.assign(t, form.value) }
-  else { list.value.push({ id: Date.now(), ...form.value }) }
-  showForm.value = false
+  try {
+    if (isEdit.value) {
+      await supplierAPI.update(editId.value, form.value)
+    } else {
+      await supplierAPI.create(form.value)
+    }
+    showForm.value = false
+    await fetchList()
+  } catch (err) {
+    console.error('保存失败', err)
+    alert('保存失败')
+  }
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>

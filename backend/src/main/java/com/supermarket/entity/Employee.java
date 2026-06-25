@@ -5,17 +5,19 @@
  * 注意 Employee 和 User 的关系：
  *   User = 系统登录账号（username + password + role）
  *   Employee = 人事信息（姓名、电话、职位、薪资等）
- * 一个 Employee 可以关联一个 User 登录账号，也可以暂时没有。
  *
- * @ManyToOne(fetch = FetchType.LAZY) 表示多对一的关系，多个员工可以关联同一个用户（虽然通常是一对一的）。
- * LAZY 加载：只有在访问 user 字段时才查询数据库，避免不必要的 JOIN。
+ * Employee 和 User 是一对一关系：
+ *   一个员工对应一个系统登录账号，一个账号也只属于一个员工。
+ *   并非所有员工都需要登录账号（如临时工），所以此关联可为 null。
  *
- * 类似 C++ 中有一个指针指向关联对象，但只在解引用时才加载数据。
+ * 类似 C++ 中的：struct Employee { User* loginAccount; }; // 每个员工最多一个账号
  *
  * @author 徐磊
  */
 package com.supermarket.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,6 +32,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Employee {
 
     @Id
@@ -75,20 +78,21 @@ public class Employee {
     private Integer status = 1;
 
     /**
-     * 关联的系统登录账号。
+     * 关联的系统登录账号（一对一关系）。
      *
-     * @ManyToOne：多个 Employee 可以关联到同一个 User（多对一关系）。
-     * @JoinColumn(name = "user_id")：外键列的名字是 user_id，存储在 employees 表中。
+     * @OneToOne：一个 Employee 对应一个 User，一个 User 也对应一个 Employee。
+     * @JoinColumn(name = "user_id")：外键列，存储在 employees 表中。
+     *   unique = true 确保一个 User 不会被多个 Employee 关联。
      *
      * FetchType.LAZY（懒加载）：
-     *   默认情况下只加载 Employee 本身，不加载关联的 User。
-     *   只有在代码中调用 employee.getUser() 时才发第二条 SQL 查询。
-     *   好处：避免了不需要 User 信息时多余的数据库查询。
+     *   默认只加载 Employee 本身，不加载关联的 User。
+     *   只有在代码中调用 employee.getUser() 时才查数据库。
      *
-     * 类似 C++ 中的 std::optional<std::reference_wrapper<User>>，按需访问。
+     * 类似 C++ 中的：std::optional<User*> loginAccount;
      */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
     @CreationTimestamp

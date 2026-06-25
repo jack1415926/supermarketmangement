@@ -105,12 +105,12 @@ public class Purchase {
      * orphanRemoval = true：孤儿删除。
      *   当你从 items 列表中移除一个 PurchaseItem 时，JPA 自动从数据库删除它。
      *
-     * @JsonIgnoreProperties("purchase")：
+     * @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "purchase"})：
      *   序列化为 JSON 时，items 中的每个 PurchaseItem 不要再次包含 purchase 引用。
      *   否则会形成无限递归：Purchase → items → PurchaseItem → purchase → items → ...
      */
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnoreProperties("purchase") // 防止 JSON 序列化无限递归
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "purchase"}) // 防止 JSON 序列化无限递归
     @ToString.Exclude
     private List<PurchaseItem> items = new ArrayList<>();
 

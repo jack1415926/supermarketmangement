@@ -149,6 +149,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { productAPI, memberAPI, saleAPI } from '@/api'
 
 // 搜索框输入的关键字
 const keyword = ref('')
@@ -189,12 +190,19 @@ const changeAmount = computed(() => {
 })
 
 // 搜索商品（当前用假数据，后续对接后端 API）
-function searchProduct() {
-  results.value = [
-    { id: 1, name: '可口可乐 330ml', price: 3.5 },
-    { id: 2, name: '康师傅方便面', price: 4.0 },
-    { id: 3, name: '农夫山泉 550ml', price: 2.0 }
-  ]
+/** 搜索商品（对接后端真实 API） */
+async function searchProduct() {
+  if (!keyword.value) return
+  try {
+    const res = await productAPI.search(keyword.value)
+    results.value = (res.data?.content || res.data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.salePrice || item.retailPrice || item.price
+    }))
+  } catch (err) {
+    console.error('搜索失败', err)
+  }
 }
 
 // 将商品加入购物车
@@ -226,10 +234,17 @@ function removeFromCart(item) {
 }
 
 // 验证会员卡号（当前用假数据）
-function verifyMember() {
+/** 验证会员卡号（对接后端真实 API） */
+async function verifyMember() {
   if (!memberCard.value) return
-  memberInfo.value = { name: '张三', cardNo: memberCard.value }
-  alert('会员验证成功')
+  try {
+    const res = await memberAPI.verify(memberCard.value)
+    memberInfo.value = { name: res.data.name, cardNo: res.data.cardNo }
+    alert('会员验证成功')
+  } catch (err) {
+    console.error('会员验证失败', err)
+    alert('会员卡号无效')
+  }
 }
 
 // 打开收款弹窗
@@ -248,29 +263,45 @@ const showReceipt = ref(false)
 const receiptData = ref({ items: [], total: '0', discount: 1, discountAmount: '0', received: '0', change: '0', time: '' })
 
 /** 确认收款，生成小票数据并展示 */
-function confirmCheckout() {
+/** 确认收款，调用后端结算 API */
+async function confirmCheckout() {
   if (receivedAmount.value < totalAmount.value) {
     alert('实收金额不足')
     return
   }
-  // 保存小票数据（结算前先快照当前购物车）
-  const rawTotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  receiptData.value = {
-    items: [...cart.value],
-    total: totalAmount.value,
-    discount: discountRate.value,
-    discountAmount: (rawTotal - Number(totalAmount.value)).toFixed(2),
-    received: Number(receivedAmount.value).toFixed(2),
-    change: changeAmount.value,
-    time: new Date().toLocaleString()
+  try {
+    // 构造结算请求：商品明细 + 会员折扣 + 实收金额
+    const saleData = {
+      items: cart.value.map(item => ({
+        productId: item.id,
+        quantity: item.quantity
+      })),
+      paymentMethod: 'CASH',
+      receivedAmount: Number(receivedAmount.value),
+      memberCardNo: memberInfo.value?.cardNo || null
+    }
+    const res = await saleAPI.settle(saleData)
+
+    // 快照购物车到小票
+    const rawTotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    receiptData.value = {
+      items: [...cart.value],
+      total: totalAmount.value,
+      discount: discountRate.value,
+      discountAmount: (rawTotal - Number(totalAmount.value)).toFixed(2),
+      received: Number(receivedAmount.value).toFixed(2),
+      change: changeAmount.value,
+      time: new Date().toLocaleString()
+    }
+    showCheckout.value = false
+    showReceipt.value = true
+    cart.value = []
+    memberInfo.value = null
+    memberCard.value = ''
+  } catch (err) {
+    console.error('结算失败', err)
+    alert('结算失败：' + (err.response?.data?.message || err.message))
   }
-  // 显示小票
-  showCheckout.value = false
-  showReceipt.value = true
-  // 清空购物车
-  cart.value = []
-  memberInfo.value = null
-  memberCard.value = ''
 }
 </script>
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API 接口层
  * 按业务模块组织，所有接口对应后端 RESTful API
  * 统一响应格式：{ code: 200, message: "success", data: {} }
@@ -55,7 +55,7 @@ export const purchaseAPI = {
 export const inventoryAPI = {
   list: (params) => request.get('/inventory', { params }),                      // 库存列表
   setThreshold: (productId, data) => request.put(`/inventory/${productId}/threshold`, data), // 设置库存预警阈值
-  check: (data) => request.post('/inventory/check', data)                       // 库存盘点
+  check: () => request.get('/inventory/check')                       // 库存盘点
 }
 
 // ==================== 报表模块 ====================
@@ -78,3 +78,4 @@ export const supplierAPI = {
   create: (data) => request.post('/suppliers', data),                // 新增供应商
   update: (id, data) => request.put(`/suppliers/${id}`, data)        // 编辑供应商
 }
+

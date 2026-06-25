@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   库存管理页面
   功能：库存列表（高亮预警）、库存盘点录入、盘点报告
 -->
@@ -76,26 +76,47 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { inventoryAPI } from '@/api'
 const keyword = ref('')
 const list = ref([])
 const showCheck = ref(false)
 const showReport = ref(false)
 const reportList = ref([])
 
-function fetchList() {
-  list.value = [
-    { id: 1, name: '可口可乐 330ml', currentStock: 200, stockMin: 50, stockMax: 500, purchasePrice: 2.8 },
-    { id: 2, name: '康师傅方便面', currentStock: 30, stockMin: 50, stockMax: 500, purchasePrice: 3.2 },
-    { id: 3, name: '农夫山泉 550ml', currentStock: 600, stockMin: 50, stockMax: 500, purchasePrice: 1.5 },
-  ]
+async function fetchList() {
+  try {
+    const res = await inventoryAPI.list({ keyword: keyword.value })
+    const rawList = res.data?.content || res.data || []
+    // 将后端返回的字段名映射为前端模板使用的字段名
+    list.value = rawList.map(function(item) {
+      return {
+        id: item.productId,
+        name: item.productName,
+        currentStock: item.stock,
+        stockMin: item.minStock,
+        stockMax: item.maxStock,
+        purchasePrice: item.purchasePrice
+      }
+    })
+  } catch (err) {
+    console.error('获取库存列表失败', err)
+  }
 }
 function openCheck() { list.value.forEach(i => i.actualStock = i.currentStock); showCheck.value = true }
-function submitCheck() {
-  reportList.value = list.value.map(i => ({ ...i, systemStock: i.currentStock, actualStock: i.actualStock || i.currentStock, diff: (i.actualStock || i.currentStock) - i.currentStock }))
-  showCheck.value = false; showReport.value = true
+async function submitCheck() {
+  try {
+    // 收集盘点数据
+    const checkItems = list.value.map(i => ({ productId: i.id, actualStock: i.actualStock || i.currentStock }))
+    await inventoryAPI.check({ items: checkItems })
+    reportList.value = list.value.map(i => ({ ...i, systemStock: i.currentStock, actualStock: i.actualStock || i.currentStock, diff: (i.actualStock || i.currentStock) - i.currentStock }))
+    showCheck.value = false; showReport.value = true
+  } catch (err) {
+    console.error('盘点失败', err)
+    alert('盘点提交失败')
+  }
 }
-fetchList()
+onMounted(() => fetchList())
 </script>
 
 <style scoped>
@@ -125,3 +146,4 @@ fetchList()
 .text-green { color: #27ae60; }
 .text-red { color: #e74c3c; }
 </style>
+
