@@ -3,6 +3,13 @@
  *
  * CommandLineRunner：
  *   Spring Boot 启动完成后自动执行 run() 方法。
+ *   适合用于：插入初始数据、检查环境配置、预热缓存。
+ *
+ * 这里用于：
+ *   首次启动时检查是否已有用户，如果没有则创建默认 admin 账号。
+ *   这样后端启动后就能立即登录测试。
+ *
+ * 类似 C++ 中的 main() 之后调用一个 init() 函数做初始化。
  *
  * 默认账号：
  *   用户名：admin
@@ -15,84 +22,48 @@ package com.supermarket.config;
 
 import com.supermarket.entity.User;
 import com.supermarket.repository.UserRepository;
-import com.supermarket.repository.EmployeeRepository;
-import com.supermarket.entity.Employee;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.Slf4j; // Lombok 的日志注解
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * @Slf4j：Lombok 的日志注解，自动生成 log 对象。
+ *   用法：log.info("消息")、log.error("错误", exception)
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
-    private final EmployeeRepository employeeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Spring Boot 启动后自动执行。
+     *
+     * @param args 命令行参数
      */
     @Override
     public void run(String... args) {
-        try {
-            long count = userRepository.count();
-            log.info("当前用户数量: {}", count);
+        // 检查是否已有用户记录
+        if (userRepository.count() == 0) {
+            log.info("数据库无用户记录，开始创建默认管理员账号...");
 
-            // 确保 admin 有对应的员工记录（POS 结账时需要）
-            if (employeeRepository.findByUserUsername("admin").isEmpty()) {
-                Employee adminEmp = new Employee();
-                adminEmp.setName("系统管理员");
-                adminEmp.setPhone("13800000000");
-                adminEmp.setPosition("系统管理员");
-                adminEmp.setSalary(new BigDecimal("0"));
-                adminEmp.setHireDate(LocalDate.now());
-                adminEmp.setUser(userRepository.findByUsername("admin").orElse(null));
-                employeeRepository.save(adminEmp);
-                log.info("为 admin 创建员工记录");
-            }
+            // 创建默认管理员
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setPassword(passwordEncoder.encode("admin123")); // BCrypt 加密
+            admin.setDisplayName("系统管理员");
+            admin.setRole("ROLE_ADMIN"); // 系统管理员，最高权限
+            admin.setStatus(1);          // 启用状态
 
-            if (count == 0) {
-                log.info("数据库无用户记录，开始创建默认账号...");
+            userRepository.save(admin);
 
-                // 直接 new BCryptPasswordEncoder，不依赖注入
-                BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-                User admin = new User();
-                admin.setUsername("admin");
-                admin.setPassword(encoder.encode("admin123"));
-                admin.setDisplayName("系统管理员");
-                admin.setRole("ROLE_ADMIN");
-                admin.setStatus(1);
-
-                userRepository.save(admin);
-                log.info("默认管理员账号创建成功！用户名: admin, 密码: admin123");
-
-                // 同时创建一个收银员账号方便测试
-                User cashier = new User();
-                cashier.setUsername("cashier");
-                cashier.setPassword(encoder.encode("cashier123"));
-                cashier.setDisplayName("李收银");
-                cashier.setRole("ROLE_CASHIER");
-                cashier.setStatus(1);
-                userRepository.save(cashier);
-                log.info("收银员账号创建成功！用户名: cashier, 密码: cashier123");
-
-                // 同时创建一个管理员账号
-                User manager = new User();
-                manager.setUsername("manager");
-                manager.setPassword(encoder.encode("manager123"));
-                manager.setDisplayName("张经理");
-                manager.setRole("ROLE_MANAGER");
-                manager.setStatus(1);
-                userRepository.save(manager);
-                log.info("管理员账号创建成功！用户名: manager, 密码: manager123");
-            }
-        } catch (Exception e) {
-            log.error("数据初始化失败", e);
+            log.info("默认管理员账号创建成功！用户名: admin，请登录后立即修改密码");
+        } else {
+            log.info("数据库已有 {} 个用户，跳过初始化。", userRepository.count());
         }
     }
 }

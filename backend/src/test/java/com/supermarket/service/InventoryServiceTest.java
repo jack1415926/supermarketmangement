@@ -135,7 +135,7 @@ class InventoryServiceTest {
     @DisplayName("库存盘点：应返回所有库存低于下限的商品")
     void checkInventory() {
         // given: 只有薯片库存偏低
-        when(productRepository.findLowStockWarning()).thenReturn(List.of(chips));
+        when(productRepository.findByStockLessThanEqualMinStock()).thenReturn(List.of(chips));
 
         // when
         List<InventoryDTO> result = inventoryService.checkInventory();

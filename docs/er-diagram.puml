@@ -1,0 +1,232 @@
+@startuml supermarket_er
+
+' 隐藏圆点
+hide circle
+
+' 标题
+title 小型超市管理系统 - 数据库 ER 图
+
+' 全局样式
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor       #FAFAFA
+    ArrowColor            #666666
+    BorderColor           #333333
+    FontColor             #222222
+    HeaderBackgroundColor #E8E8E8
+}
+
+skinparam stereotypeCBackgroundColor #F0F0F0
+
+' =============================================================================
+' 实体定义
+' =============================================================================
+
+entity "users\n（系统用户）" as users <<U,FF808080>> {
+    *id            : BIGINT       <<PK>> <<auto>>
+    --
+    *username      : VARCHAR(50)  <<unique>>
+    *password      : VARCHAR(100)
+    display_name   : VARCHAR(50)
+    *role          : VARCHAR(20)
+    *status        : INT          <<default 1>>
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "employees\n（员工）" as employees <<U,FF808080>> {
+    *id            : BIGINT        <<PK>> <<auto>>
+    --
+    *name          : VARCHAR(50)
+    phone          : VARCHAR(20)
+    email          : VARCHAR(100)
+    position       : VARCHAR(50)
+    salary         : DECIMAL(10,2)
+    hire_date      : DATE
+    *status        : INT           <<default 1>>
+    user_id        : BIGINT        <<FK>>
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "categories\n（商品分类）" as categories <<U,FF808080>> {
+    *id            : BIGINT       <<PK>> <<auto>>
+    --
+    *name          : VARCHAR(50)  <<unique>>
+    parent_id      : BIGINT       <<FK self>>
+    *sort_order    : INT          <<default 0>>
+    *status        : INT          <<default 1>>
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "suppliers\n（供应商）" as suppliers <<U,FF808080>> {
+    *id            : BIGINT        <<PK>> <<auto>>
+    --
+    *name          : VARCHAR(100)  <<unique>>
+    contact        : VARCHAR(50)
+    phone          : VARCHAR(20)
+    address        : VARCHAR(200)
+    *status        : INT           <<default 1>>
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "products\n（商品）" as products <<U,FF808080>> {
+    *id                : BIGINT        <<PK>> <<auto>>
+    --
+    *barcode           : VARCHAR(50)   <<unique>>
+    *name              : VARCHAR(100)
+    unit               : VARCHAR(20)
+    *sale_price        : DECIMAL(10,2)
+    *purchase_price    : DECIMAL(10,2)
+    *stock             : INT           <<default 0>>
+    *min_stock         : INT           <<default 0>>
+    *max_stock         : INT           <<default 999>>
+    production_date    : DATETIME
+    shelf_life_days    : INT
+    *status            : INT           <<default 1>>
+    category_id        : BIGINT        <<FK>>
+    supplier_id        : BIGINT        <<FK>>
+    created_at         : DATETIME
+    updated_at         : DATETIME
+}
+
+entity "purchases\n（进货单头）" as purchases <<U,FF808080>> {
+    *id            : BIGINT        <<PK>> <<auto>>
+    --
+    *purchase_no   : VARCHAR(30)   <<unique>>
+    supplier_id    : BIGINT        <<FK>>
+    employee_id    : BIGINT        <<FK>>
+    *total_amount  : DECIMAL(12,2) <<default 0>>
+    *status        : VARCHAR(20)   <<default PENDING>>
+    remark         : VARCHAR(255)
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "purchase_items\n（进货明细）" as purchase_items <<U,FF808080>> {
+    *id             : BIGINT        <<PK>> <<auto>>
+    --
+    *purchase_id    : BIGINT        <<FK>>
+    *product_id     : BIGINT        <<FK>>
+    *quantity       : INT
+    purchase_price  : DECIMAL(10,2)
+    subtotal        : DECIMAL(12,2)
+}
+
+entity "members\n（会员）" as members <<U,FF808080>> {
+    *id            : BIGINT        <<PK>> <<auto>>
+    --
+    *card_no       : VARCHAR(20)   <<unique>>
+    *name          : VARCHAR(50)
+    *phone         : VARCHAR(20)   <<unique>>
+    id_card        : VARCHAR(18)
+    gender         : VARCHAR(2)
+    birth_date     : DATETIME
+    *points        : INT           <<default 0>>
+    *total_spent   : DECIMAL(12,2) <<default 0>>
+    valid_until    : DATETIME
+    *status        : INT           <<default 1>>
+    created_at     : DATETIME
+    updated_at     : DATETIME
+}
+
+entity "sales\n（销售单头）" as sales <<U,FF808080>> {
+    *id              : BIGINT        <<PK>> <<auto>>
+    --
+    *flow_no         : VARCHAR(30)   <<unique>>
+    cashier_id       : BIGINT        <<FK>>
+    member_id        : BIGINT        <<FK nullable>>
+    *total_amount    : DECIMAL(12,2) <<default 0>>
+    *discount_amount : DECIMAL(12,2) <<default 0>>
+    *received_amount : DECIMAL(12,2) <<default 0>>
+    *change_amount   : DECIMAL(12,2) <<default 0>>
+    payment_method   : VARCHAR(20)
+    *status          : VARCHAR(20)   <<default COMPLETED>>
+    remark           : VARCHAR(255)
+    created_at       : DATETIME
+}
+
+entity "sale_items\n（销售明细）" as sale_items <<U,FF808080>> {
+    *id         : BIGINT        <<PK>> <<auto>>
+    --
+    *sale_id    : BIGINT        <<FK>>
+    *product_id : BIGINT        <<FK>>
+    *quantity   : INT
+    sale_price  : DECIMAL(10,2)
+    subtotal    : DECIMAL(12,2)
+}
+
+entity "shifts\n（换班记录）" as shifts <<U,FF808080>> {
+    *id                : BIGINT        <<PK>> <<auto>>
+    --
+    cashier_id         : BIGINT        <<FK>>
+    *start_time        : DATETIME      <<default NOW>>
+    end_time           : DATETIME
+    *transaction_count : INT           <<default 0>>
+    *total_amount      : DECIMAL(12,2) <<default 0>>
+    *status            : VARCHAR(20)   <<default ACTIVE>>
+}
+
+' =============================================================================
+' 关系定义
+' 1对1:  ||--||
+' 1对多:  ||--o{  或  ||--|{
+' 0..1对多: |o--o{
+' =============================================================================
+
+' 用户账号 ↔ 员工（1 个登录账号可以关联 0..1 个员工）
+users          ||--o{ employees        : "1 登录账号\n对应 0..1 员工"
+
+' 商品分类自引用（父子分类树）
+categories     ||--o{ categories       : "1 父分类\n对应 N 子分类"
+
+' 分类 ↔ 商品
+categories     ||--o{ products         : "1 分类\n对应 N 商品"
+
+' 供应商 ↔ 商品
+suppliers      ||--o{ products         : "1 供应商\n供应 N 商品"
+
+' 供应商 ↔ 进货单
+suppliers      ||--o{ purchases        : "1 供应商\n被 N 进货单引用"
+
+' 员工（经手人）↔ 进货单
+employees      ||--o{ purchases        : "1 经手员工\n办理 N 进货单"
+
+' 进货单 ↔ 进货明细（1 对多）
+purchases      ||--|{ purchase_items   : "1 进货单\n包含 N 明细"
+
+' 商品 ↔ 进货明细
+products       ||--o{ purchase_items   : "1 商品\n出现在 N 进货明细"
+
+' 员工（收银员）↔ 销售单
+employees      ||--o{ sales            : "1 收银员\n处理 N 交易"
+
+' 会员 ↔ 销售单（NULL 表示非会员交易）
+members        |o--o{ sales            : "0..1 会员\n产生 N 交易\n（NULL=非会员）"
+
+' 销售单 ↔ 销售明细（1 对多）
+sales          ||--|{ sale_items       : "1 销售单\n包含 N 明细"
+
+' 商品 ↔ 销售明细
+products       ||--o{ sale_items       : "1 商品\n出现在 N 销售明细"
+
+' 员工 ↔ 换班记录
+employees      ||--o{ shifts           : "1 收银员\n有 N 班次"
+
+' =============================================================================
+' 图例
+' =============================================================================
+
+legend right
+    |= 符号 |= 含义 |
+    | <#FF808080>U</#FF808080> | 实体（数据表） |
+    | * | 必填字段 |
+    | <<PK>> | 主键 |
+    | <<FK>> | 外键 |
+    | <<unique>> | 唯一约束 |
+    | <<auto>> | 自增 |
+endlegend
+
+@enduml

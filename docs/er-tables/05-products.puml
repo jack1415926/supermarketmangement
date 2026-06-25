@@ -1,0 +1,22 @@
+@startuml
+title products（商品）
+
+entity "products（商品）" as products {
+  id : BIGINT <<PK>>  // PK auto
+  barcode : VARCHAR(50) <<unique>>  // unique EAN-13
+  name : VARCHAR(100)
+  unit : VARCHAR(20)  // 瓶/袋/箱/kg
+  sale_price : DECIMAL(10,2)  // 零售价
+  purchase_price : DECIMAL(10,2)  // 进货价
+  stock : INT  // 当前库存
+  min_stock : INT  // 下限预警
+  max_stock : INT  // 上限积压
+  production_date : DATETIME
+  shelf_life_days : INT  // 保质期
+  status : INT  // 1上架 0下架
+  category_id : BIGINT <<FK>>  // FK -> categories.id
+  supplier_id : BIGINT <<FK>>  // FK -> suppliers.id
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml

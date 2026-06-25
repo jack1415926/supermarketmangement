@@ -69,7 +69,7 @@ public class InventoryService {
     /** 库存盘点：返回所有缺货（库存 <= 下限）的商品 */
     @Transactional(readOnly = true)
     public List<InventoryDTO> checkInventory() {
-        List<Product> lowStock = productRepository.findLowStockWarning();
+        List<Product> lowStock = productRepository.findByStockLessThanEqualMinStock();
         return lowStock.stream().map(this::toDTO).collect(Collectors.toList());
     }
 

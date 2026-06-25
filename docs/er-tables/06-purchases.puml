@@ -1,0 +1,15 @@
+@startuml
+title purchases（进货单头）
+
+entity "purchases（进货单头）" as purchases {
+  id : BIGINT <<PK>>  // PK auto
+  purchase_no : VARCHAR(30) <<unique>>  // unique P+年月日+序号
+  supplier_id : BIGINT <<FK>>  // FK -> suppliers.id
+  employee_id : BIGINT <<FK>>  // FK -> employees.id 经手人
+  total_amount : DECIMAL(12,2)
+  status : VARCHAR(20)  // PENDING/COMPLETED/CANCELLED
+  remark : VARCHAR(255)
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml

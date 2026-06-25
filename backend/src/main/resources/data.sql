@@ -20,7 +20,18 @@
 -- 关闭外键检查
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 已跳过清空，使用 INSERT IGNORE 避免重复插入
+-- 清空已有数据（按依赖反序）
+TRUNCATE TABLE shifts;
+TRUNCATE TABLE sale_items;
+TRUNCATE TABLE sales;
+TRUNCATE TABLE purchase_items;
+TRUNCATE TABLE purchases;
+TRUNCATE TABLE members;
+TRUNCATE TABLE products;
+TRUNCATE TABLE categories;
+TRUNCATE TABLE suppliers;
+TRUNCATE TABLE employees;
+TRUNCATE TABLE users;
 
 -- =============================================================================
 -- 1. 系统用户（3 条）
@@ -29,7 +40,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 --       配合（Spring 会自动给 "ADMIN" 加 "ROLE_" 前缀，但 DB 里存的就是完整字符串）
 -- 如登录失败（hash 不匹配），启用 backend/tools/PasswordResetRunner.java 自动重置
 -- =============================================================================
-INSERT IGNORE INTO users (id, username, password, display_name, role, status, created_at, updated_at) VALUES
+INSERT INTO users (id, username, password, display_name, role, status, created_at, updated_at) VALUES
 (1, 'admin',   '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '系统管理员', 'ROLE_ADMIN',   1, NOW(), NOW()),
 (2, 'manager', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '李店长',     'ROLE_MANAGER', 1, NOW(), NOW()),
 (3, 'cashier', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '收银员小张', 'ROLE_CASHIER', 1, NOW(), NOW());
@@ -37,7 +48,7 @@ INSERT IGNORE INTO users (id, username, password, display_name, role, status, cr
 -- =============================================================================
 -- 2. 商品分类（6 条，2 级）
 -- =============================================================================
-INSERT IGNORE INTO categories (id, name, parent_id, sort_order, status, created_at, updated_at) VALUES
+INSERT INTO categories (id, name, parent_id, sort_order, status, created_at, updated_at) VALUES
 (1, '食品',     NULL, 1, 1, NOW(), NOW()),
 (2, '饮品',     NULL, 2, 1, NOW(), NOW()),
 (3, '日用品',   NULL, 3, 1, NOW(), NOW()),
@@ -48,7 +59,7 @@ INSERT IGNORE INTO categories (id, name, parent_id, sort_order, status, created_
 -- =============================================================================
 -- 3. 供应商（3 条）
 -- =============================================================================
-INSERT IGNORE INTO suppliers (id, name, contact, phone, address, status, created_at, updated_at) VALUES
+INSERT INTO suppliers (id, name, contact, phone, address, status, created_at, updated_at) VALUES
 (1, '可口可乐华南分公司', '王经理', '13800138001', '广东省深圳市南山区科技园路 1 号',  1, NOW(), NOW()),
 (2, '蒙牛集团供应链',     '刘经理', '13900139002', '内蒙古呼和浩特市和林格尔县盛乐经济园区', 1, NOW(), NOW()),
 (3, '立白日化集团',       '陈经理', '13700137003', '广东省广州市天河区珠江新城 88 号',      1, NOW(), NOW());
@@ -57,7 +68,7 @@ INSERT IGNORE INTO suppliers (id, name, contact, phone, address, status, created
 -- 4. 商品（12 条）
 -- 涵盖 4 个类别，库存涵盖：充足 / 临界预警 / 缺货 3 种状态
 -- =============================================================================
-INSERT IGNORE INTO products (id, barcode, name, unit, sale_price, purchase_price, stock, min_stock, max_stock, production_date, shelf_life_days, status, category_id, supplier_id, version, created_at, updated_at) VALUES
+INSERT INTO products (id, barcode, name, unit, sale_price, purchase_price, stock, min_stock, max_stock, production_date, shelf_life_days, status, category_id, supplier_id, version, created_at, updated_at) VALUES
 -- 碳酸饮料（供应商 1，分类 6）
 (1,  '6901234567890', '可口可乐 330ml',     '瓶',  3.50,  2.20, 200,  50, 500, '2026-05-01 00:00:00', 365, 1, 6, 1, 0, NOW(), NOW()),
 (2,  '6901234567891', '雪碧 330ml',         '瓶',  3.50,  2.20, 180,  50, 500, '2026-05-15 00:00:00', 365, 1, 6, 1, 0, NOW(), NOW()),
@@ -84,7 +95,7 @@ INSERT IGNORE INTO products (id, barcode, name, unit, sale_price, purchase_price
 -- 5. 员工（5 条）
 -- 关联系统账号：员工 1 → cashier、员工 3 → manager；其他暂未开通账号
 -- =============================================================================
-INSERT IGNORE INTO employees (id, name, phone, email, position, salary, hire_date, status, user_id, created_at, updated_at) VALUES
+INSERT INTO employees (id, name, phone, email, position, salary, hire_date, status, user_id, created_at, updated_at) VALUES
 (1, '张磊', '13800138001', 'zhanglei@supermarket.local', '收银员', 3500.00, '2024-03-15', 1, 3,    NOW(), NOW()),
 (2, '王芳', '13800138002', 'wangfang@supermarket.local', '收银员', 3800.00, '2024-05-20', 1, NULL, NOW(), NOW()),
 (3, '刘强', '13800138003', 'liuqiang@supermarket.local', '店长',   6500.00, '2022-08-10', 1, 2,    NOW(), NOW()),
@@ -95,7 +106,7 @@ INSERT IGNORE INTO employees (id, name, phone, email, position, salary, hire_dat
 -- 6. 会员（5 条）
 -- 状态：1 正常 / 0 注销；valid_until 涵盖 3 种情况（有效 / 即将过期 / 已过期）
 -- =============================================================================
-INSERT IGNORE INTO members (id, card_no, name, phone, id_card, gender, birth_date, points, total_spent, valid_until, status, created_at, updated_at) VALUES
+INSERT INTO members (id, card_no, name, phone, id_card, gender, birth_date, points, total_spent, valid_until, status, created_at, updated_at) VALUES
 (1, 'M00000001', '赵丽华', '13900139001', '440101199003151234', '女', '1990-03-15 00:00:00',  120,   856.50, '2027-06-22 00:00:00', 1, '2024-06-22 10:00:00', NOW()),
 (2, 'M00000002', '孙建国', '13900139002', '440101198512203456', '男', '1985-12-20 00:00:00',   45,   320.00, '2026-12-10 00:00:00', 1, '2024-06-22 10:30:00', NOW()),
 (3, 'M00000003', '周晓敏', '13900139003', '440101199507082345', '女', '1995-07-08 00:00:00',  680,  4580.30, '2026-08-15 00:00:00', 1, '2023-08-15 14:20:00', NOW()),
@@ -105,11 +116,11 @@ INSERT IGNORE INTO members (id, card_no, name, phone, id_card, gender, birth_dat
 -- =============================================================================
 -- 7. 进货单（2 条）+ 进货明细（4 条）
 -- =============================================================================
-INSERT IGNORE INTO purchases (id, purchase_no, supplier_id, employee_id, total_amount, status, remark, created_at, updated_at) VALUES
+INSERT INTO purchases (id, purchase_no, supplier_id, employee_id, total_amount, status, remark, created_at, updated_at) VALUES
 (1, 'P20260620001', 1, 4,  880.00, 'COMPLETED', '可口可乐 6 箱到货', '2026-06-20 09:30:00', '2026-06-20 09:45:00'),
 (2, 'P20260621001', 2, 4, 1080.00, 'PENDING',   '蒙牛酸奶本周订单',   '2026-06-21 14:20:00', '2026-06-21 14:20:00');
 
-INSERT IGNORE INTO purchase_items (id, purchase_id, product_id, quantity, purchase_price, subtotal) VALUES
+INSERT INTO purchase_items (id, purchase_id, product_id, quantity, purchase_price, subtotal) VALUES
 (1, 1, 1, 200, 2.20, 440.00),
 (2, 1, 2, 200, 2.20, 440.00),
 (3, 2, 9, 300, 2.00, 600.00),
@@ -125,7 +136,7 @@ INSERT IGNORE INTO purchase_items (id, purchase_id, product_id, quantity, purcha
 --   discount = total × 0.05 (有会员) | 0
 --   change = received - (total - discount)
 -- =============================================================================
-INSERT IGNORE INTO sales (id, flow_no, cashier_id, member_id, total_amount, discount_amount, received_amount, change_amount, payment_method, status, remark, created_at) VALUES
+INSERT INTO sales (id, flow_no, cashier_id, member_id, total_amount, discount_amount, received_amount, change_amount, payment_method, status, remark, created_at) VALUES
 -- 销售 1：收银员张磊卖给赵丽华，2 瓶可口可乐，会员 95 折
 -- items: 2 × 3.50 = 7.00; discount = 7.00 × 0.05 = 0.35; final = 6.65; change = 10.00 - 6.65 = 3.35
 (1, 'S20260622001', 1, 1,    7.00, 0.35, 10.00, 3.35, 'CASH',   'COMPLETED', '', '2026-06-22 09:15:32'),
@@ -148,7 +159,7 @@ INSERT IGNORE INTO sales (id, flow_no, cashier_id, member_id, total_amount, disc
 -- items: 3.50；final = 3.50；change = 0
 (5, 'S20260622005', 1, NULL, 3.50, 0.00,  3.50, 0.00, 'CARD',   'COMPLETED', '', '2026-06-22 15:55:42');
 
-INSERT IGNORE INTO sale_items (id, sale_id, product_id, quantity, sale_price, subtotal) VALUES
+INSERT INTO sale_items (id, sale_id, product_id, quantity, sale_price, subtotal) VALUES
 -- 销售 1 的明细：2 瓶可口可乐
 (1, 1, 1, 2, 3.50, 7.00),
 -- 销售 2 的明细：好丽友派 + 芬达 + 海天生抽
@@ -166,7 +177,7 @@ INSERT IGNORE INTO sale_items (id, sale_id, product_id, quantity, sale_price, su
 -- =============================================================================
 -- 9. 换班记录（2 条）
 -- =============================================================================
-INSERT IGNORE INTO shifts (id, cashier_id, start_time, end_time, transaction_count, total_amount, status) VALUES
+INSERT INTO shifts (id, cashier_id, start_time, end_time, transaction_count, total_amount, status) VALUES
 -- 上一班：张磊 早班（8:00-16:00），处理 4 笔交易，合计 47.20 元
 (1, 1, '2026-06-22 08:00:00', '2026-06-22 16:00:00', 4, 47.20, 'CLOSED'),
 -- 当前班：王芳 晚班（16:00 开始），已处理 1 笔，11.70 元

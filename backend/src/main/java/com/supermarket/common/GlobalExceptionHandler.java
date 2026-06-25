@@ -98,10 +98,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleGeneral(Exception ex) {
+        // 记录完整的异常堆栈到服务器日志
         log.error("未预期的服务器内部错误", ex);
-        // 开发阶段返回真实错误信息方便调试
-        String msg = ex.getClass().getSimpleName() + ": " + (ex.getMessage() != null ? ex.getMessage() : "无");
+        // 返回通用错误消息，不暴露 ex.getMessage()
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(Result.serverError(msg));
+            .body(Result.serverError("服务器内部错误，请稍后再试"));
     }
 }

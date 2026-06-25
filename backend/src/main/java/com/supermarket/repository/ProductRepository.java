@@ -50,23 +50,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      *
      * stock < minStock → 当前库存低于安全阈值，需要补货。
      */
-    /**
-     * 查询所有库存低于下限的商品（缺货预警）。
-     * 使用 JPQL 比较同一实体的两个字段：stock < minStock
-     */
-    @Query("SELECT p FROM Product p WHERE p.stock < p.minStock")
-    List<Product> findLowStockWarning();
+    List<Product> findByStockLessThanEqualMinStock();
 
     /**
      * 查询所有库存高于上限的商品（积压预警）。
      * stock > maxStock → 库存积压，需要促销或减少进货。
      */
-    /**
-     * 查询所有库存高于上限的商品（积压预警）。
-     * 使用 JPQL 比较同一实体的两个字段：stock > maxStock
-     */
-    @Query("SELECT p FROM Product p WHERE p.stock > p.maxStock")
-    List<Product> findOverStockWarning();
+    List<Product> findByStockGreaterThanEqualMaxStock();
 
     /**
      * 根据供应商 ID 查询商品。

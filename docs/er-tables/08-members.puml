@@ -1,0 +1,19 @@
+@startuml
+title members（会员）
+
+entity "members（会员）" as members {
+  id : BIGINT <<PK>>  // PK auto
+  card_no : VARCHAR(20) <<unique>>  // unique M+8位
+  name : VARCHAR(50)
+  phone : VARCHAR(20) <<unique>>  // unique
+  id_card : VARCHAR(18)  // 身份证
+  gender : VARCHAR(2)  // 男/女
+  birth_date : DATETIME
+  points : INT  // 积分
+  total_spent : DECIMAL(12,2)  // 累计消费
+  valid_until : DATETIME  // 有效期一年
+  status : INT  // 1正常 0注销
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+@enduml
