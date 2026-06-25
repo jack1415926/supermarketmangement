@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/auth") // 所有端点的基础路径
@@ -41,6 +42,7 @@ public class AuthController {
      * @param request 登录请求体 { "username": "admin", "password": "admin123" }
      * @return { "code": 200, "message": "success", "data": { "token": "...", "username": "admin", ... } }
      */
+    @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
@@ -60,6 +62,7 @@ public class AuthController {
      *
      * @return 登出成功提示
      */
+    @Operation(summary = "用户登出")
     @PostMapping("/logout")
     public Result<Void> logout() {
         return Result.success(); // 无数据返回，仅提示成功
@@ -76,6 +79,7 @@ public class AuthController {
      * @param userDetails 当前登录用户（由 JwtAuthFilter 设置）
      * @return 用户信息
      */
+    @Operation(summary = "获取当前用户信息")
     @GetMapping("/me")
     public Result<Map<String, Object>> getCurrentUser(
         @AuthenticationPrincipal UserDetails userDetails

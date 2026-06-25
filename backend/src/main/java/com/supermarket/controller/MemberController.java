@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/members")
@@ -24,6 +25,7 @@ public class MemberController {
     private final MemberService memberService;
 
     /** 分页查询会员列表 */
+    @Operation(summary = "分页搜索会员")
     @GetMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<PageDTO<Member>> findAll(
@@ -35,6 +37,7 @@ public class MemberController {
     }
 
     /** 注册会员 */
+    @Operation(summary = "注册新会员")
     @PostMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Member> create(@Valid @RequestBody MemberRequest request) {
@@ -42,6 +45,7 @@ public class MemberController {
     }
 
     /** 会员卡续期 */
+    @Operation(summary = "会员续期（延长一年）")
     @PutMapping("/{id}/renew")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Member> renew(@PathVariable Long id) {
@@ -52,6 +56,7 @@ public class MemberController {
      * 会员卡验证（POS 收银时刷卡验证）。
      * 此端点需要收银员、管理员或系统管理员角色。
      */
+    @Operation(summary = "POS刷卡验证会员")
     @GetMapping("/verify/{cardNo}")
     @PreAuthorize("hasAnyRole('CASHIER','MANAGER','ADMIN')")
     public Result<MemberVerifyResponse> verify(@PathVariable String cardNo) {

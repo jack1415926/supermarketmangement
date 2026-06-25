@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -28,6 +29,7 @@ public class ReportController {
     private final ReportService reportService;
 
     /** 销售排行榜（按商品销量） */
+    @Operation(summary = "商品销售排行榜")
     @GetMapping("/sales-ranking")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> salesRanking(
@@ -38,6 +40,7 @@ public class ReportController {
     }
 
     /** 日销售报表 */
+    @Operation(summary = "日销售报表")
     @GetMapping("/sales-daily")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> salesDaily(
@@ -48,6 +51,7 @@ public class ReportController {
     }
 
     /** 月销售报表 */
+    @Operation(summary = "月销售报表")
     @GetMapping("/sales-monthly")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> salesMonthly(
@@ -58,6 +62,7 @@ public class ReportController {
     }
 
     /** 收银员业绩统计 */
+    @Operation(summary = "收银员业绩统计")
     @GetMapping("/cashier-performance")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> cashierPerformance(

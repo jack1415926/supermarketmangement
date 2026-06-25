@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -24,6 +25,7 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     /** 分页查询库存信息，避免一次性加载所有商品 */
+    @Operation(summary = "库存列表（分页）")
     @GetMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<PageDTO<InventoryDTO>> findAll(
@@ -37,6 +39,7 @@ public class InventoryController {
      * 更新商品库存预警阈值。
      * 只更新请求中指定的字段，未传入的字段保持不变。
      */
+    @Operation(summary = "更新库存预警阈值")
     @PutMapping("/{productId}/threshold")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Void> updateThreshold(
@@ -55,6 +58,7 @@ public class InventoryController {
     }
 
     /** 库存盘点：检查缺货和积压商品（只读查询，使用 GET） */
+    @Operation(summary = "库存盘点（缺货清单）")
     @GetMapping("/check")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<InventoryDTO>> checkInventory() {

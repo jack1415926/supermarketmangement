@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/purchases")
@@ -28,6 +29,7 @@ public class PurchaseController {
     private final PurchaseService purchaseService;
 
     /** 创建进货单 */
+    @Operation(summary = "创建进货单")
     @PostMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Purchase> create(
@@ -38,6 +40,7 @@ public class PurchaseController {
     }
 
     /** 进货记录查询 */
+    @Operation(summary = "进货记录分页查询")
     @GetMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<PageDTO<Purchase>> findAll(
@@ -48,6 +51,7 @@ public class PurchaseController {
     }
 
     /** 进货单详情 */
+    @Operation(summary = "查询进货单详情")
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Purchase> findById(@PathVariable Long id) {
@@ -55,6 +59,7 @@ public class PurchaseController {
     }
 
     /** 进货计划：列出库存低于下限的商品，给出建议进货量 */
+    @Operation(summary = "进货计划（缺货建议）")
     @GetMapping("/plan")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Map<String, Object>>> getPurchasePlan() {

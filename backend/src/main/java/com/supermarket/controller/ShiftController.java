@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/shifts")
@@ -24,6 +25,7 @@ public class ShiftController {
     private final ShiftService shiftService;
 
     /** 开始班次（收银员登录后调用） */
+    @Operation(summary = "开始班次（上班打卡）")
     @PostMapping("/start")
     @PreAuthorize("hasAnyRole('CASHIER','MANAGER','ADMIN')")
     public Result<Shift> startShift(@AuthenticationPrincipal UserDetails userDetails) {
@@ -31,6 +33,7 @@ public class ShiftController {
     }
 
     /** 结束班次（交班） */
+    @Operation(summary = "结束班次（交班）")
     @PostMapping("/end")
     @PreAuthorize("hasAnyRole('CASHIER','MANAGER','ADMIN')")
     public Result<Shift> endShift(@AuthenticationPrincipal UserDetails userDetails) {
@@ -38,6 +41,7 @@ public class ShiftController {
     }
 
     /** 查询当前活跃班次，无活跃班次时返回 404 */
+    @Operation(summary = "查询当前活跃班次")
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('CASHIER','MANAGER','ADMIN')")
     public Result<Shift> getActiveShift(@AuthenticationPrincipal UserDetails userDetails) {
@@ -49,6 +53,7 @@ public class ShiftController {
     }
 
     /** 查询某收银员的所有班次记录 */
+    @Operation(summary = "查询收银员班次记录")
     @GetMapping("/cashier/{cashierId}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Shift>> findByCashier(@PathVariable Long cashierId) {
@@ -56,6 +61,7 @@ public class ShiftController {
     }
 
     /** 查询所有活跃班次（管理员查看当前在岗收银员） */
+    @Operation(summary = "查询所有活跃班次")
     @GetMapping("/active-all")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<List<Shift>> findActiveShifts() {

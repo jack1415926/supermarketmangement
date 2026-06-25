@@ -13,6 +13,7 @@ import com.supermarket.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/products")
@@ -22,6 +23,7 @@ public class ProductController {
     private final ProductService productService;
 
     /** 分页查询商品列表，支持关键字搜索 */
+    @Operation(summary = "分页搜索商品")
     @GetMapping
     public Result<PageDTO<ProductDTO>> findAll(
         @RequestParam(defaultValue = "0") int page,
@@ -32,6 +34,7 @@ public class ProductController {
     }
 
     /** 搜索商品（POS 扫码/手动输入时模糊搜索） */
+    @Operation(summary = "搜索商品")
     @GetMapping("/search")
     public Result<PageDTO<ProductDTO>> search(
         @RequestParam String keyword,
@@ -42,6 +45,7 @@ public class ProductController {
     }
 
     /** 按条形码查询（POS 扫码枪读取） */
+    @Operation(summary = "按条形码查询商品")
     @GetMapping("/barcode/{barcode}")
     public Result<ProductDTO> findByBarcode(@PathVariable String barcode) {
         Product product = productService.findByBarcode(barcode);
@@ -49,6 +53,7 @@ public class ProductController {
     }
 
     /** 新增商品 */
+    @Operation(summary = "新增商品")
     @PostMapping
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Product> create(@RequestBody Product product) {
@@ -56,6 +61,7 @@ public class ProductController {
     }
 
     /** 修改商品 */
+    @Operation(summary = "更新商品")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Product> update(@PathVariable Long id, @RequestBody Product product) {
@@ -63,6 +69,7 @@ public class ProductController {
     }
 
     /** 下架商品 */
+    @Operation(summary = "下架商品（软删除）")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     public Result<Void> delete(@PathVariable Long id) {
