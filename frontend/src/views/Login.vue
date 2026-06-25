@@ -1,4 +1,10 @@
-<template>
+<!--
+  登录页面
+  功能：用户名密码登录，对接后端 POST /api/auth/login
+  登录成功后按角色跳转：收银员 → /pos，管理员/系统管理员 → /dashboard
+-->
+
+﻿<template>
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
@@ -38,22 +44,31 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
 
-function handleLogin() {
+async function handleLogin() {
   loading.value = true
   error.value = ''
 
-  // TODO: 对接后端登录 API
-  setTimeout(() => {
-    error.value = '后端未就绪，请先启动后端服务'
+  try {
+    const user = await userStore.login(username.value, password.value)
+    if (user.role === 'cashier') {
+      router.push('/pos')
+    } else {
+      router.push('/')
+    }
+  } catch (err) {
+    error.value = err.response?.data?.message || err.message || '登录失败，请检查网络连接'
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 </script>
 
